@@ -178,7 +178,7 @@ const runSocketIOSample = function() {
                     'mic', 'camera'));
             conference.publish(localStream, publishOption).then(publication => {
                 publicationGlobal = publication;
-                mixStream(myRoom, publication.id, 'common')
+                mixStream(myRoom, publication.id, ['common','presenters','rectangle'])
                 publication.addEventListener('error', (err) => {
                     console.log('Publication error: ' + err.error.message);
                 });
