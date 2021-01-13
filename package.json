@@ -25,7 +25,8 @@
   },
   "dependencies": {
     "electron-is-dev": "^1.2.0"
-  },"scripts": {
+  },
+  "scripts": {
     "start": "electron .",
     "pack-mac": "electron-builder --mac --publish always",
     "pack-win": "electron-builder --win --publish always",
