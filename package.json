@@ -1,0 +1,111 @@
+{
+  "name": "owt-client-rtc",
+  "version": "1.0.0",
+  "description": "owt-client-rtc",
+  "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HeiSir2014/owt-client-rtc.git"
+  },
+  "keywords": [
+    "electron",
+    "webrtc",
+    "rtc",
+    "owt"
+  ],
+  "author": "heisir (QQ:1586462)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/HeiSir2014/owt-client-rtc/issues"
+  },
+  "homepage": "https://github.com/HeiSir2014/owt-client-rtc#readme",
+  "devDependencies": {
+    "electron": "^11.2.0",
+    "electron-builder": "^22.9.1"
+  },
+  "dependencies": {
+    "electron-is-dev": "^1.2.0"
+  },"scripts": {
+    "start": "electron .",
+    "pack-mac": "electron-builder --mac --publish always",
+    "pack-win": "electron-builder --win --publish always",
+    "postinstall": "electron-builder install-app-deps",
+    "pack-linux": "electron-builder --linux --publish always",
+    "windows-latest": "npm run pack-win",
+    "macos-latest": "npm run pack-mac",
+    "ubuntu-latest": "npm run pack-linux"
+  },
+  "build": {
+    "appId": "cn.heisir.owtrtcclient",
+    "artifactName": "${productName}-${os}-${arch}-${version}.${ext}",
+    "electronVersion": "11.2.0",
+    "copyright": "Copyright © 2021 ${author}",
+    "compression": "normal",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/*",
+      "!.github/*",
+      "!test/*",
+      "!README.md",
+      "!node_modules/ffmpeg-static/ffmpeg.exe",
+      "!node_modules/ffmpeg-static/ffmpeg",
+      "!node_modules/ffmpeg-static/ffmpeg.ffmpeg",
+      "!resource/aria2/*"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
+      "icon": "static/icon/logo-512.png"
+    },
+    "dmg": {
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 410,
+          "y": 230,
+          "type": "link",
+          "path": "/Applications"
+        },
+        {
+          "x": 130,
+          "y": 230,
+          "type": "file"
+        }
+      ]
+    },
+    "mac": {
+      "hardenedRuntime": true,
+      "appId": "cn.heisir.owtrtcclient-mac",
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg"
+      ],
+      "icon": "static/icon/logo.icns"
+    },
+    "appImage": {
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "maintainer": "heisir <heisir21@163.com>",
+      "category": "Utility"
+    }
+  }
+}
