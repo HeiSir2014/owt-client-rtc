@@ -29,6 +29,10 @@
 'use strict';
 var conference;
 var publicationGlobal;
+var subscirptionGlobal;;
+var bytesSentGlobal = 0;
+var bytesReceivedGlobal = 0;
+
 const runSocketIOSample = function() {
 
     let localStream;
@@ -130,9 +134,12 @@ const runSocketIOSample = function() {
         conference.subscribe(stream,{video:{width:stream.settings.video[0].resolution.width,height:stream.settings.video[0].resolution.height}})
         .then((subscription)=>{
             subscirptionLocal = subscription;
-           
+            subscirptionGlobal = subscirptionLocal;
             $video.srcObject = stream.mediaStream;
-        }, (err)=>{ console.log('subscribe failed', err);
+        }, (err)=>{
+            subscirptionLocal = null;
+            subscirptionGlobal = null;
+            console.log('subscribe failed', err);
         });
         stream.addEventListener('ended', () => {
             $video.srcObject = null;
@@ -184,6 +191,7 @@ const runSocketIOSample = function() {
                 });
             });
         }, err => {
+            publicationGlobal = null;
             console.error('Failed to create MediaStream, ' +
                 err);
                 if(Is720P)
@@ -244,9 +252,53 @@ const runSocketIOSample = function() {
                 }
             });
         });
+
+        function calcNetwork(bytesSent,bytesReceived)
+        {
+            let speedSent = 0;
+            let speedReceived = 0;
+            if(bytesReceivedGlobal)
+            {
+                speedReceived = Math.round((bytesReceived - bytesReceivedGlobal)/1024);
+            }
+            bytesReceivedGlobal = bytesReceived;
+            let download = document.querySelector('.network .download');
+            download.innerHTML = `下行：${speedReceived} KB/s`;
+            if(bytesSentGlobal)
+            {
+                speedSent = Math.round((bytesSent - bytesSentGlobal)/1024);
+            }
+            bytesSentGlobal = bytesSent;
+            let up = document.querySelector('.network .upload');
+            up.innerHTML = `上行：${speedSent} KB/s`;
+        }
+
+        setInterval(() => {
+            let bytesSent = 0;
+            let bytesReceived = 0;
+
+            subscirptionGlobal && subscirptionGlobal.getStats().then(stats=>{
+                stats.forEach((stat)=>{
+                    /^RTCIceCandidatePair/.test(stat['id']) && stat['bytesSent'] && (bytesSent = bytesSent + stat['bytesSent']);
+                    /^RTCIceCandidatePair/.test(stat['id']) && stat['bytesReceived'] && (bytesReceived = bytesReceived + stat['bytesReceived']);
+                });
+                publicationGlobal && publicationGlobal.getStats().then(stats=>{
+                    stats.forEach((stat)=>{
+                        /^RTCIceCandidatePair/.test(stat['id']) && stat['bytesSent'] && (bytesSent = bytesSent + stat['bytesSent']);
+                        /^RTCIceCandidatePair/.test(stat['id']) && stat['bytesReceived'] && (bytesReceived = bytesReceived + stat['bytesReceived']);
+                    });
+                    calcNetwork(bytesSent,bytesReceived);
+                });
+                if(!publicationGlobal)
+                {
+                    calcNetwork(bytesSent,bytesReceived);
+                }
+            });
+        }, 1000);
     };
 };
 window.onbeforeunload = function(event){
-    conference.leave()
-    publicationGlobal.stop();
+    conference && conference.leave()
+    publicationGlobal && publicationGlobal.stop();
+    subscirptionGlobal && subscirptionGlobal.stop();
 }

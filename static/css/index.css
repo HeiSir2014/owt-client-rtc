@@ -23,7 +23,8 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 
 .heisir{
-
+    padding: 0;
+    margin: 0;
 }
 
 .heisir .header{
@@ -31,6 +32,35 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     height: 32px;
     position: absolute;
     -webkit-app-region: drag;
+}
+
+.heisir .header .network{
+    width: 233px;
+    right: 10px;
+    position: absolute;
+    text-align: left;
+    background-color: #88000000;
+    height: 100%;
+}
+.heisir .header .network *{
+    font-size: 12px;
+    line-height: 32px;
+    font-style: normal;
+    display: inline-block;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    height: 100%;
+    color: white;
+    vertical-align: middle;
+}
+.heisir .header .network .upload,.heisir .header .network .download{
+    width: 100px;
+}
+.heisir .header .network .wireless{
+    width: 14px;
+    background-image: url(../icon/network.png);
+    margin-right: 5px;
 }
 
 .heisir .bitrate-container{
