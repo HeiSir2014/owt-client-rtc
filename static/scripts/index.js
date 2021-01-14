@@ -27,6 +27,7 @@
 // This file is borrowed from lynckia/licode with some modifications.
 
 'use strict';
+const { ipcRenderer } = require('electron');
 var conference;
 var publicationGlobal;
 var subscirptionGlobal;;
@@ -294,11 +295,29 @@ const runSocketIOSample = function() {
                     calcNetwork(bytesSent,bytesReceived);
                 }
             });
+            if(!subscirptionGlobal)
+            {
+                calcNetwork(0,0);
+            }
         }, 1000);
+
+
+
+        let close = document.querySelector('.systools .close');
+        let exit = document.querySelector('.tools .exit');
+        exit.onclick = close.onclick = ()=>{
+            conference && (conference.leave());
+            publicationGlobal && publicationGlobal.stop();
+            subscirptionGlobal && subscirptionGlobal.stop();
+            conference = publicationGlobal = subscirptionGlobal = null;
+            let v = document.querySelector('.video-container .playRTC');
+            v && (v.srcObject = null);
+            ipcRenderer.send("close-win");
+        };
     };
 };
 window.onbeforeunload = function(event){
-    conference && conference.leave()
+    conference && conference.leave();
     publicationGlobal && publicationGlobal.stop();
     subscirptionGlobal && subscirptionGlobal.stop();
 }

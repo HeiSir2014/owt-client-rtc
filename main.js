@@ -75,8 +75,10 @@ let mainWindow = null;
             event.preventDefault()
             shell.openExternal(url);
         });
-
+        mainWindow.webContents.on('ipc-message',(e,channel,data)=>{
+            if (channel === 'close-win') {
+                mainWindow.close();
+            }
+        });
     });
-    
-    
 })();

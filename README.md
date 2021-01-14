@@ -6,3 +6,6 @@
 - 低延时多人互动
 - 桌面分享
 - 本地录制
+
+# UI
+![UI 效果](https://github.com/HeiSir2014/owt-client-rtc/blob/main/static/imgs/ui.png?raw=true)
