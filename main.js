@@ -1,9 +1,12 @@
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
-const { app, BrowserWindow, Tray, ipcMain, shell, Menu, dialog } = require('electron');
+const winston = require('winston');
+const { app, BrowserWindow, Tray, ipcMain, shell, Menu, dialog,session } = require('electron');
 const isDev = require('electron-is-dev');
 let mainWindow = null;
+let screenWindow = null;
+let logger;
 
 
 (function(){
@@ -24,7 +27,7 @@ let mainWindow = null;
                 mainWindow.focus()
             }
         } else {
-            app.quit()
+            app.quit();
         }
     });
     process.on('uncaughtException',(err, origin) =>{
@@ -34,14 +37,34 @@ let mainWindow = null;
         logger.error(`unhandledRejection: ${promise} | ${reason}`)
     });
 
-    app.on('ready', () => {
+    app.on('ready', async () => {
+
+        logger = winston.createLogger({
+            level: 'debug',
+            format: winston.format.combine(
+                winston.format.timestamp({
+                    format: 'YYYY-MM-DD HH:mm:ss'
+                }),
+                winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`+(info.splat!==undefined?`${info.splat}`:" "))
+            ),
+            transports: [
+                new winston.transports.Console(),
+                new winston.transports.File({ filename: path.join(app.getPath('userData'),'logs/error.log'), level: 'error' }),
+                new winston.transports.File({ filename: path.join(app.getPath('userData'),'logs/all.log') }),
+            ],
+        });
+
+        logger.info('loadExtension success');
 
         let param = {
             serverURL:'',
             room:'8888',
             userId:'any',
-            userNick:'游客',
+            userNick:'游客'
         };
+
+        logger.info(`process.argv = ${JSON.stringify(process.argv)}`);
+
         process.argv.forEach(arg => {
             let _ = null;
             if((_ = arg.match(/^--(.*)=([^=]*)$/)) && _.length > 2)
@@ -79,6 +102,35 @@ let mainWindow = null;
             if (channel === 'close-win') {
                 mainWindow.close();
             }
+            else if(channel === 'show-screen'){
+                if(screenWindow)
+                {
+                    screenWindow.close();
+                    screenWindow = null;
+                }
+                screenWindow = new BrowserWindow({
+                    width: 1280,
+                    height: 720,
+                    backgroundColor: '#ff2e2c29',
+                    skipTaskbar: false,
+                    transparent: false, frame: false, resizable: true,
+                    webPreferences: {
+                        nodeIntegration: true,
+                        spellcheck: false,
+                        webSecurity:!isDev
+                    },
+                    icon: path.join(__dirname, 'static/icon/logo.png'),
+                    alwaysOnTop: false,
+                    hasShadow: false,
+                });
+                screenWindow.setMenu(null);
+                let p = JSON.parse(JSON.stringify(param));
+                p['streamId'] = data;
+                screenWindow.loadFile( path.join(__dirname, 'static/screen.html'),{ query:p });
+                isDev && screenWindow.openDevTools();
+                screenWindow.moveTop();
+            }
         });
+
     });
 })();

@@ -24,7 +24,8 @@
     "electron-builder": "^22.9.1"
   },
   "dependencies": {
-    "electron-is-dev": "^1.2.0"
+    "electron-is-dev": "^1.2.0",
+    "winston": "^3.3.3"
   },
   "scripts": {
     "start": "electron .",

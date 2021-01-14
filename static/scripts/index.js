@@ -27,9 +27,10 @@
 // This file is borrowed from lynckia/licode with some modifications.
 
 'use strict';
-const { ipcRenderer } = require('electron');
+const { ipcRenderer,desktopCapturer } = require('electron');
 var conference;
 var publicationGlobal;
+var publicationScreenGlobal;
 var subscirptionGlobal;;
 var bytesSentGlobal = 0;
 var bytesReceivedGlobal = 0;
@@ -152,9 +153,14 @@ const runSocketIOSample = function() {
 
     conference.addEventListener('streamadded', (event) => {
         console.log('A new stream is added ', event.stream.id);
-        isSelf = isSelf?isSelf:event.stream.id != publicationGlobal.id;
-        subscribeForward && isSelf && subscribeAndRenderVideo(event.stream);
-        mixStream(myRoom, event.stream.id, ['common','presenters','rectangle']);
+        //isSelf = isSelf?isSelf:event.stream.id != publicationGlobal.id;
+        //mixStream(myRoom, event.stream.id, ['common','presenters','rectangle']);
+        if(event.stream.origin !== myId && event.stream.source 
+            && event.stream.source.video
+            && event.stream.source.video == 'screen-cast')
+        {
+            ipcRenderer.send('show-screen',event.stream.id);
+        }
         event.stream.addEventListener('ended', () => {
             console.log(event.stream.id + ' is ended.');
         });
@@ -301,18 +307,56 @@ const runSocketIOSample = function() {
             }
         }, 1000);
 
-
-
         let close = document.querySelector('.systools .close');
         let exit = document.querySelector('.tools .exit');
+        let desktopShare = document.querySelector('.tools .desktop');
         exit.onclick = close.onclick = ()=>{
-            conference && (conference.leave());
-            publicationGlobal && publicationGlobal.stop();
-            subscirptionGlobal && subscirptionGlobal.stop();
+            try {
+                conference && (conference.leave());
+                publicationGlobal && publicationGlobal.stop();
+                subscirptionGlobal && subscirptionGlobal.stop();
+            } catch (_) {
+                
+            }
             conference = publicationGlobal = subscirptionGlobal = null;
             let v = document.querySelector('.video-container .playRTC');
             v && (v.srcObject = null);
             ipcRenderer.send("close-win");
+        };
+
+        desktopShare.onclick = ()=>{
+              let mediaStream;
+              desktopCapturer.getSources({ types: ['screen'] }).then(async sources => {
+                  mediaStream = await navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: {
+                      mandatory: {
+                        chromeMediaSource: 'screen',
+                        chromeMediaSourceId: sources[0].id,
+                        minWidth: 1280,
+                        maxWidth: 1920,
+                        minHeight: 720,
+                        maxHeight: 1920
+                      }
+                    }
+                  });
+                  let publishOption = {video:[{codec:{name:'h264',profile:'B'},maxBitrate:8000}]};
+                  let ScreenStream = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('screen-cast', 'screen-cast'));
+                  conference.publish(ScreenStream,publishOption).then(publication => {
+                      publicationScreenGlobal = publication;
+                      mixStream(myRoom, publication.id, ['common','presenters','rectangle']);
+                      publication.addEventListener('error', (err) => {
+                          console.log('Publication error: ' + err.error.message);
+                      });
+
+                      ipcRenderer.send('show-screen',publication.id);
+
+                  },err =>{
+                      console.error('Failed to publish ScreenStream, ' + err);
+                      ScreenStream = null;
+                      publicationScreenGlobal = null;
+                  });
+              });
         };
     };
 };
