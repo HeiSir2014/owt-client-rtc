@@ -117,7 +117,6 @@ const runSocketIOSample = function () {
             videoOptions.codecs = [{ name: "h264", profile: "CB" }];
             videoOptions.resolution = stream.settings.video[0].resolution;
         conference.subscribe(stream, {
-            audio: true,
             video: videoOptions
         }).then((subscription) => {
                 mixStreamGlobal = stream;
@@ -170,7 +169,7 @@ const runSocketIOSample = function () {
         let mediaStream;
         Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
             audioConstraints, videoConstraints)).then(stream => {
-                let publishOption = { video: [{ codec: { name: 'h264', profile: 'H' }, maxBitrate: 2000}] };
+                let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 4000}] };
                 mediaStream = stream;
                 localStream = new Owt.Base.LocalStream(
                     mediaStream, new Owt.Base.StreamSourceInfo(
@@ -214,13 +213,14 @@ const runSocketIOSample = function () {
                 }
                 var streams = resp.remoteStreams;
                 for (const stream of streams) {
-                    if (!subscribeForward) {
-                        if ((stream.source.audio === 'mixed' || stream.source.video ===
-                            'mixed') && stream.id.indexOf('-presenters') > 0) {
-                            subscribeAndRenderVideo(stream);
-                        }
-                    } else if (stream.source.audio !== 'mixed') {
+                    if ((stream.source.audio === 'mixed' || stream.source.video ===
+                        'mixed') && stream.id.indexOf('-presenters') > 0) {
                         subscribeAndRenderVideo(stream);
+                    }
+                    else if (stream.origin !== myId && stream.source
+                        && stream.source.video
+                        && stream.source.video == 'screen-cast') {
+                        ipcRenderer.send('show-screen',stream.id);
                     }
                 }
                 console.log('Streams in conference:', streams.length);
