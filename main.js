@@ -57,7 +57,7 @@ let logger;
         logger.info('loadExtension success');
 
         let param = {
-            serverURL:'',
+            serverURL: '',
             room:'8888',
             userId:'any',
             userNick:'游客'

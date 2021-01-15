@@ -64,6 +64,21 @@ var mixStream = function (room, stream, views, host) {
         onResponse, host);
 };
 
+var setLayoutStream = function (room, stream, views, host) {
+    var jsonPatch = [];
+    views.forEach(view => {
+        jsonPatch.push({
+            op: 'replace',
+            path: '/info/layout',
+            value: view
+        });
+    });
+    
+    send('PATCH', '/rooms/' + room + '/streams/' + stream, jsonPatch,
+        onResponse, host);
+};
+
+
 var startStreamingIn = function (room, inUrl, host) {
     var options = {
         url: inUrl,

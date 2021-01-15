@@ -31,7 +31,8 @@ const { ipcRenderer, desktopCapturer } = require('electron');
 var conference;
 var publicationGlobal;
 var publicationScreenGlobal;
-var subscirptionGlobal;;
+var subscirptionGlobal;
+var mixStreamGlobal;
 var bytesSentGlobal = 0;
 var bytesReceivedGlobal = 0;
 
@@ -112,33 +113,26 @@ const runSocketIOSample = function () {
     function subscribeAndRenderVideo(stream) {
         let subscirptionLocal = null;
         let $video = document.querySelector('.video-container .playRTC');
-        function subscribeDifferentResolution(stream, resolution) {
-            subscirptionLocal && subscirptionLocal.stop();
-            subscirptionLocal = null;
-            const videoOptions = {};
-            videoOptions.codec = { name: "h264", profile: "B" };
-            videoOptions.resolution = resolution;
-            conference.subscribe(stream, {
-                audio: true,
-                video: videoOptions
-            }).then((
-                subscription) => {
-                subscirptionLocal = subscription;
-                $video.srcObject = stream.mediaStream;
-            });
-        }
-        conference.subscribe(stream, { video: { width: stream.settings.video[0].resolution.width, height: stream.settings.video[0].resolution.height } })
-            .then((subscription) => {
+        const videoOptions = {};
+            videoOptions.codecs = [{ name: "h264", profile: "CB" }];
+            videoOptions.resolution = stream.settings.video[0].resolution;
+        conference.subscribe(stream, {
+            audio: true,
+            video: videoOptions
+        }).then((subscription) => {
+                mixStreamGlobal = stream;
                 subscirptionLocal = subscription;
                 subscirptionGlobal = subscirptionLocal;
                 $video.srcObject = stream.mediaStream;
             }, (err) => {
+                mixStreamGlobal = null;
                 subscirptionLocal = null;
                 subscirptionGlobal = null;
                 console.log('subscribe failed', err);
             });
         stream.addEventListener('ended', () => {
             $video.srcObject = null;
+            mixStreamGlobal = null;
         });
         stream.addEventListener('updated', () => {
 
@@ -148,7 +142,7 @@ const runSocketIOSample = function () {
     conference.addEventListener('streamadded', (event) => {
         console.log('A new stream is added ', event.stream.id);
         //isSelf = isSelf?isSelf:event.stream.id != publicationGlobal.id;
-        //mixStream(myRoom, event.stream.id, ['common','presenters','rectangle']);
+        //mixStream(myRoom, event.stream.id, ['common','presenters']);
         if (event.stream.origin !== myId && event.stream.source
             && event.stream.source.video
             && event.stream.source.video == 'screen-cast') {
@@ -176,14 +170,14 @@ const runSocketIOSample = function () {
         let mediaStream;
         Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
             audioConstraints, videoConstraints)).then(stream => {
-                let publishOption = { video: [{ codec: { name: 'h264', profile: 'B' }, maxBitrate: 2500 }] };
+                let publishOption = { video: [{ codec: { name: 'h264', profile: 'H' }, maxBitrate: 2000}] };
                 mediaStream = stream;
                 localStream = new Owt.Base.LocalStream(
                     mediaStream, new Owt.Base.StreamSourceInfo(
                         'mic', 'camera'));
                 conference.publish(localStream, publishOption).then(publication => {
                     publicationGlobal = publication;
-                    mixStream(myRoom, publication.id, ['common', 'presenters', 'rectangle'])
+                    mixStream(myRoom, publication.id, ['common', 'presenters'])
                     publication.addEventListener('error', (err) => {
                         console.log('Publication error: ' + err.error.message);
                     });
@@ -292,6 +286,7 @@ const runSocketIOSample = function () {
         let close = document.querySelector('.systools .close');
         let exit = document.querySelector('.tools .exit');
         let desktopShare = document.querySelector('.tools .desktop');
+        let changeLayout = document.querySelector('.tools .layout');
         exit.onclick = close.onclick = () => {
             try {
                 conference && (conference.leave());
@@ -326,16 +321,16 @@ const runSocketIOSample = function () {
                     }
                 }
             });
-            let publishOption = { video: [{ codec: { name: 'h264', profile: 'B' }, maxBitrate: 5000 }] };
+            let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 4000 }] };
             let ScreenStream = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('screen-cast', 'screen-cast'));
             conference.publish(ScreenStream, publishOption).then(publication => {
                 publicationScreenGlobal = publication;
-                mixStream(myRoom, publication.id, ['common', 'presenters', 'rectangle']);
+                mixStream(myRoom, publication.id, ['common']);
                 publication.addEventListener('error', (err) => {
                     console.log('Publication error: ' + err.error.message);
                 });
 
-                ipcRenderer.send('show-screen', publication.id);
+                //ipcRenderer.send('show-screen', publication.id);
 
             }, err => {
                 console.error('Failed to publish ScreenStream, ' + err);
@@ -374,10 +369,39 @@ const runSocketIOSample = function () {
                 
             });
         };
+
+        window.layoutIndex = 0;
+        changeLayout.onclick = (e)=>{
+            if(subscirptionGlobal)
+            {
+                var layouts = [
+                    [{"region":[{"id":"1","area":{"height":"1","width":"1","top":"0","left":"0"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"1","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"1/4","width":"1/4","top":"3/4","left":"3/4"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"1279/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"539/1080","width":"639/1920","top":"0","left":"1281/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"539/1080","width":"639/1920","top":"541/1080","left":"1281/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"1279/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"359/1080","width":"639/1920","top":"0","left":"1281/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"358/1080","width":"639/1920","top":"361/1080","left":"1281/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"359/1080","width":"639/1920","top":"721/1080","left":"1281/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"1439/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"269/1080","width":"479/1920","top":"0","left":"1441/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"268/1080","width":"479/1920","top":"271/1080","left":"1441/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"268/1080","width":"479/1920","top":"541/1080","left":"1441/1920"},"shape":"rectangle"},{"id":"5","area":{"height":"269/1080","width":"479/1920","top":"811/1080","left":"1441/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"719/1080","width":"1279/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"359/1080","width":"639/1920","top":"0","left":"1281/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"358/1080","width":"639/1920","top":"361/1080","left":"1281/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"358/1080","width":"639/1920","top":"721/1080","left":"1281/1920"},"shape":"rectangle"},{"id":"5","area":{"height":"359/1080","width":"639/1920","top":"721/1080","left":"641/1920"},"shape":"rectangle"},{"id":"6","area":{"height":"359/1080","width":"639/1920","top":"721/1080","left":"0"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"809/1080","width":"1439/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"269/1080","width":"479/1920","top":"0","left":"481/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"268/1080","width":"479/1920","top":"281/1080","left":"1441/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"268/1080","width":"479/1920","top":"541/1080","left":"1441/1920"},"shape":"rectangle"},{"id":"5","area":{"height":"268/1080","width":"479/1920","top":"811/1080","left":"1441/1920"},"shape":"rectangle"},{"id":"6","area":{"height":"269/1080","width":"479/1920","top":"811/1080","left":"961/1920"},"shape":"rectangle"},{"id":"7","area":{"height":"269/1080","width":"479/1920","top":"811/1080","left":"481/1920"},"shape":"rectangle"},{"id":"8","area":{"height":"269/1080","width":"479/1920","top":"811/1080","left":"0"},"shape":"rectangle"}]}],
+                    [{"region":[{"id":"1","area":{"height":"1","width":"1","top":"0","left":"0"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"959/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"1","width":"959/1920","top":"0","left":"961/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"959/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"959/1920","width":"959/1920","top":"0","left":"961/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"539/1080","width":"959/1920","top":"541/1080","left":"961/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"539/1080","width":"959/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"539/1080","width":"959/1920","top":"0","left":"961/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"538/1080","width":"959/1920","top":"541/1080","left":"0"},"shape":"rectangle"},{"id":"4","area":{"height":"539/1080","width":"959/1920","top":"541/1080","left":"961/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"539/1080","width":"959/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"539/1080","width":"959/1920","top":"0","left":"961/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"538/1080","width":"639/1920","top":"541/1080","left":"0"},"shape":"rectangle"},{"id":"4","area":{"height":"539/1080","width":"639/1920","top":"541/1080","left":"641/1920"},"shape":"rectangle"},{"id":"5","area":{"height":"539/1080","width":"639/1920","top":"541/1080","left":"1281/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"539/1080","width":"639/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"539/1080","width":"638/1920","top":"0","left":"641/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"539/1080","width":"639/1920","top":"0","left":"1281/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"539/1080","width":"639/1920","top":"541/1080","left":"0"},"shape":"rectangle"},{"id":"5","area":{"height":"539/1080","width":"638/1920","top":"541/1080","left":"641/1920"},"shape":"rectangle"},{"id":"6","area":{"height":"539/1080","width":"639/1920","top":"541/1080","left":"1281/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"359/1080","width":"639/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"359/1080","width":"638/1920","top":"0","left":"641/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"359/1080","width":"639/1920","top":"0","left":"1281/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"358/1080","width":"639/1920","top":"361/1080","left":"0"},"shape":"rectangle"},{"id":"5","area":{"height":"358/1080","width":"638/1920","top":"361/1080","left":"641/1920"},"shape":"rectangle"},{"id":"6","area":{"height":"358/1080","width":"639/1920","top":"361/1080","left":"1281/1920"},"shape":"rectangle"},{"id":"7","area":{"height":"359/1080","width":"639/1920","top":"721/1080","left":"0"},"shape":"rectangle"},{"id":"8","area":{"height":"359/1080","width":"638/1920","top":"721/1080","left":"641/1920"},"shape":"rectangle"},{"id":"9","area":{"height":"359/1080","width":"639/1920","top":"721/1080","left":"1281/1920"},"shape":"rectangle"}]}],
+                ];
+                layoutIndex = layoutIndex + 1;
+                if(layoutIndex >= layouts.length)
+                {
+                    layoutIndex = 0;
+                }
+
+                let values = [];
+                layouts[layoutIndex].forEach(__ => {
+                    let regions = __["region"];
+                    let _ = [];
+                    //if(regions.length == 5) return;
+                    regions.forEach(region =>{
+                        _.push({region:region});
+                    });
+                    values.push(_);
+                });
+                setLayoutStream(myRoom,mixStreamGlobal.id,values);
+            }
+        }
     };
 };
 window.onbeforeunload = function (event) {
     conference && conference.leave();
     publicationGlobal && publicationGlobal.stop();
     subscirptionGlobal && subscirptionGlobal.stop();
+    publicationScreenGlobal && publicationScreenGlobal.stop();
 }

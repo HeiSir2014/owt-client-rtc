@@ -98,6 +98,18 @@
       ],
       "icon": "static/icon/logo.icns"
     },
+    "nsis": {
+      "perMachine": true,
+      "oneClick": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "static/icon/logo.ico",
+      "uninstallerIcon": "static/icon/logo.ico",
+      "installerHeaderIcon": "static/icon/logo.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "OWT-Client"
+    },
     "appImage": {
       "category": "public.app-category.productivity"
     },
