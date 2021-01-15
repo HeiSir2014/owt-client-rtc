@@ -8,4 +8,6 @@
 - 本地录制
 
 # UI
-![UI 效果](https://github.com/HeiSir2014/owt-client-rtc/blob/main/static/imgs/ui.png?raw=true)
+![UI 效果](https://github.com/HeiSir2014/owt-client-rtc/blob/main/static/imgs/ui-01.png?raw=true)
+
+![UI 效果](https://github.com/HeiSir2014/owt-client-rtc/blob/main/static/imgs/ui-02.png?raw=true)
