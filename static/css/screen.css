@@ -19,11 +19,11 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     margin: 0 auto;
     width: 100%;
     height: 100%;
-    overflow: hidden;
+    overflow: auto;
   }
   
 .video-container video{
-    object-fit: cover;
+    object-fit: none;
     box-shadow: inset 0px 0px 25px 0px #fff;
 }
 
@@ -92,7 +92,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     position: relative;
     overflow: hidden;
     
-    -webkit-app-region: drag;
+    -webkit-app-region: no-drag;
 }
 
 .heisir .header{
@@ -100,21 +100,24 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     height: 32px;
     position: absolute;
     z-index: 2;
+    -webkit-app-region: drag;
 }
 
-.heisir .header .network{
-    width: 230px;
+.heisir .header .tools{
+    width: fit-content;
     right: 32px;
     position: absolute;
     text-align: left;
-    background-color: #000000bb;
+    background-color: #000000;
     height: 100%;
     padding: 0 5px;
     box-sizing: content-box;
     border-bottom-left-radius: 5px;
     overflow: hidden;
+    
+    -webkit-app-region: no-drag;
 }
-.heisir .header .network *{
+.heisir .header .tools *{
     font-size: 12px;
     line-height: 32px;
     font-style: normal;
@@ -126,13 +129,15 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     color: white;
     vertical-align: middle;
     white-space: nowrap;
+    width: 28px;
 }
-.heisir .header .network .upload,.heisir .header .network .download{
-    width: 100px;
+.heisir .header .tools .screen-scale{
+    background-image: url(../icon/screen-scale.png);
+    margin-right: 5px;
 }
-.heisir .header .network .wireless{
-    width: 14px;
-    background-image: url(../icon/network.png);
+
+.heisir .header .tools .screen-1{
+    background-image: url(../icon/screen-1-1.png);
     margin-right: 5px;
 }
 

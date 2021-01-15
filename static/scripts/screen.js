@@ -30,11 +30,13 @@ const runSocketIOSample = function() {
         let subscirptionLocal=null;
         let $video = document.querySelector('.video-container .playRTC');
         stream.source.audio
-        conference.subscribe(stream,{video:{width:stream.settings.video[0].resolution.width,height:stream.settings.video[0].resolution.height},audio:stream.source.audio?true:false})
+        conference.subscribe(stream,{video:stream.settings.video[0].resolution,audio:stream.source.audio?true:false})
         .then((subscription)=>{
             subscirptionLocal = subscription;
             subscirptionGlobal = subscirptionLocal;
             $video.srcObject = stream.mediaStream;
+            $video.width = stream.settings.video[0].resolution.width;
+            $video.height = stream.settings.video[0].resolution.height;
         }, (err)=>{
             subscirptionLocal = null;
             subscirptionGlobal = null;
@@ -42,6 +44,9 @@ const runSocketIOSample = function() {
         });
         stream.addEventListener('ended', () => {
             $video.srcObject = null;
+
+            let close = document.querySelector('.systools .close');
+            close.click();
         });
         stream.addEventListener('updated', () => {
 
@@ -82,6 +87,32 @@ const runSocketIOSample = function() {
             v && (v.srcObject = null);
             ipcRenderer.send("close-win");
         };
+
+        
+        let screenScale = document.querySelector('.tools .screen-scale');
+        let screen1V1 = document.querySelector('.tools .screen-1');
+        screenScale.onclick = ()=>{
+            let v = document.querySelector('.video-container .playRTC');
+            
+            delete v.width;
+            delete v.height;
+
+            v.style.width = "100%";
+            v.style.height = "100%";
+
+            v.style.objectFit = 'cover';
+        }
+        screen1V1.onclick = ()=>{
+            let v = document.querySelector('.video-container .playRTC');
+            v.width = v.videoWidth;
+            v.height = v.videoHeight;
+
+            
+            v.style.width = "";
+            v.style.height = "";
+
+            v.style.objectFit = 'none';
+        }
     };
 };
 window.onbeforeunload = function(event){

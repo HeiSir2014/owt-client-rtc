@@ -27,7 +27,7 @@
 // This file is borrowed from lynckia/licode with some modifications.
 
 'use strict';
-const { ipcRenderer,desktopCapturer } = require('electron');
+const { ipcRenderer, desktopCapturer } = require('electron');
 var conference;
 var publicationGlobal;
 var publicationScreenGlobal;
@@ -35,7 +35,7 @@ var subscirptionGlobal;;
 var bytesSentGlobal = 0;
 var bytesReceivedGlobal = 0;
 
-const runSocketIOSample = function() {
+const runSocketIOSample = function () {
 
     let localStream;
     let showedRemoteStreams = [];
@@ -45,22 +45,17 @@ const runSocketIOSample = function() {
     let myUserId;
     let myUserNick;
 
-    function resolutionToText(resolution)
-    {
-        if(resolution.width >= 1920 && resolution.height >= 1080)
-        {
+    function resolutionToText(resolution) {
+        if (resolution.width >= 1920 && resolution.height >= 1080) {
             return "蓝光";
         }
-        if(resolution.width == 1280 && resolution.height == 720)
-        {
+        if (resolution.width == 1280 && resolution.height == 720) {
             return "超清";
         }
-        if(resolution.width == 852 && resolution.height == 480)
-        {
+        if (resolution.width == 852 && resolution.height == 480) {
             return "高清";
         }
-        if(resolution.width == 640 && resolution.height == 360)
-        {
+        if (resolution.width == 640 && resolution.height == 360) {
             return "标清";
         }
         return "";
@@ -74,8 +69,8 @@ const runSocketIOSample = function() {
             /\+/g, ' '));
     }
 
-    var subscribeForward = getParameterByName('forward') === 'true'?true:false;
-    var isSelf = getParameterByName('self') === 'false'?false:true;
+    var subscribeForward = getParameterByName('forward') === 'true' ? true : false;
+    var isSelf = getParameterByName('self') === 'false' ? false : true;
     conference = new Owt.Conference.ConferenceClient();
     function createResolutionButtons(stream, subscribeResolutionCallback) {
         let $p = $(`#${stream.id}resolutions`);
@@ -88,10 +83,10 @@ const runSocketIOSample = function() {
         // Resolutions from settings.
         for (const videoSetting of stream.settings.video) {
             const resolution = videoSetting.resolution;
-            if (resolution && resolutionToText(resolution) != "" ) {
+            if (resolution && resolutionToText(resolution) != "") {
                 const button = $('<option/>', {
                     text: resolutionToText(resolution),
-                    class:'bitrateOption',
+                    class: 'bitrateOption',
                     click: () => {
                         subscribeResolutionCallback(stream, resolution);
                     }
@@ -101,11 +96,10 @@ const runSocketIOSample = function() {
         }
         // Resolutions from extraCapabilities.
         for (const resolution of stream.extraCapabilities.video.resolutions.reverse()) {
-            if( resolutionToText(resolution) != "" )
-            {
+            if (resolutionToText(resolution) != "") {
                 const button = $('<option/>', {
                     text: resolutionToText(resolution),
-                    class:'bitrateOption',
+                    class: 'bitrateOption',
                     click: () => {
                         subscribeResolutionCallback(stream, resolution);
                     }
@@ -115,14 +109,14 @@ const runSocketIOSample = function() {
         };
         return $p;
     }
-    function subscribeAndRenderVideo(stream){
-        let subscirptionLocal=null;
+    function subscribeAndRenderVideo(stream) {
+        let subscirptionLocal = null;
         let $video = document.querySelector('.video-container .playRTC');
-        function subscribeDifferentResolution(stream, resolution){
+        function subscribeDifferentResolution(stream, resolution) {
             subscirptionLocal && subscirptionLocal.stop();
             subscirptionLocal = null;
             const videoOptions = {};
-            videoOptions.codec = {name:"h264",profile:"B"};
+            videoOptions.codec = { name: "h264", profile: "B" };
             videoOptions.resolution = resolution;
             conference.subscribe(stream, {
                 audio: true,
@@ -133,16 +127,16 @@ const runSocketIOSample = function() {
                 $video.srcObject = stream.mediaStream;
             });
         }
-        conference.subscribe(stream,{video:{width:stream.settings.video[0].resolution.width,height:stream.settings.video[0].resolution.height}})
-        .then((subscription)=>{
-            subscirptionLocal = subscription;
-            subscirptionGlobal = subscirptionLocal;
-            $video.srcObject = stream.mediaStream;
-        }, (err)=>{
-            subscirptionLocal = null;
-            subscirptionGlobal = null;
-            console.log('subscribe failed', err);
-        });
+        conference.subscribe(stream, { video: { width: stream.settings.video[0].resolution.width, height: stream.settings.video[0].resolution.height } })
+            .then((subscription) => {
+                subscirptionLocal = subscription;
+                subscirptionGlobal = subscirptionLocal;
+                $video.srcObject = stream.mediaStream;
+            }, (err) => {
+                subscirptionLocal = null;
+                subscirptionGlobal = null;
+                console.log('subscribe failed', err);
+            });
         stream.addEventListener('ended', () => {
             $video.srcObject = null;
         });
@@ -155,19 +149,17 @@ const runSocketIOSample = function() {
         console.log('A new stream is added ', event.stream.id);
         //isSelf = isSelf?isSelf:event.stream.id != publicationGlobal.id;
         //mixStream(myRoom, event.stream.id, ['common','presenters','rectangle']);
-        if(event.stream.origin !== myId && event.stream.source 
+        if (event.stream.origin !== myId && event.stream.source
             && event.stream.source.video
-            && event.stream.source.video == 'screen-cast')
-        {
-            ipcRenderer.send('show-screen',event.stream.id);
+            && event.stream.source.video == 'screen-cast') {
+            ipcRenderer.send('show-screen', event.stream.id);
         }
         event.stream.addEventListener('ended', () => {
             console.log(event.stream.id + ' is ended.');
         });
     });
 
-    function publishVideo(Is720P,shareScreen,simulcast)
-    {
+    function publishVideo(Is720P, shareScreen, simulcast) {
         // audioConstraintsForMic
         let audioConstraints = new Owt.Base.AudioTrackConstraints(Owt.Base.AudioSourceInfo.MIC);
         // videoConstraintsForCamera
@@ -178,37 +170,35 @@ const runSocketIOSample = function() {
             // videoConstraintsForScreen
             videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.SCREENCAST);
         }
-        if(Is720P)
-        {
-            videoConstraints.resolution = {width:1280,height:720};
+        if (Is720P) {
+            videoConstraints.resolution = { width: 1280, height: 720 };
         }
         let mediaStream;
         Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
             audioConstraints, videoConstraints)).then(stream => {
-            let publishOption = {video:[{codec:{name:'h264',profile:'B'},maxBitrate:4000}]};
-            mediaStream = stream;
-            localStream = new Owt.Base.LocalStream(
-                mediaStream, new Owt.Base.StreamSourceInfo(
-                    'mic', 'camera'));
-            conference.publish(localStream, publishOption).then(publication => {
-                publicationGlobal = publication;
-                mixStream(myRoom, publication.id, ['common','presenters','rectangle'])
-                publication.addEventListener('error', (err) => {
-                    console.log('Publication error: ' + err.error.message);
+                let publishOption = { video: [{ codec: { name: 'h264', profile: 'B' }, maxBitrate: 2500 }] };
+                mediaStream = stream;
+                localStream = new Owt.Base.LocalStream(
+                    mediaStream, new Owt.Base.StreamSourceInfo(
+                        'mic', 'camera'));
+                conference.publish(localStream, publishOption).then(publication => {
+                    publicationGlobal = publication;
+                    mixStream(myRoom, publication.id, ['common', 'presenters', 'rectangle'])
+                    publication.addEventListener('error', (err) => {
+                        console.log('Publication error: ' + err.error.message);
+                    });
                 });
-            });
-        }, err => {
-            publicationGlobal = null;
-            console.error('Failed to create MediaStream, ' +
-                err);
-                if(Is720P)
-                {
-                    publishVideo(false,shareScreen,simulcast);
+            }, err => {
+                publicationGlobal = null;
+                console.error('Failed to create MediaStream, ' +
+                    err);
+                if (Is720P) {
+                    publishVideo(false, shareScreen, simulcast);
                 }
-        });
+            });
     }
 
-    window.onload = function() {
+    window.onload = function () {
         var simulcast = getParameterByName('simulcast') || false;
         var shareScreen = getParameterByName('screen') || false;
         myRoom = getParameterByName('room');
@@ -217,24 +207,24 @@ const runSocketIOSample = function() {
         var isHttps = (location.protocol === 'https:');
         var mediaUrl = getParameterByName('url');
         var isPublish = getParameterByName('publish');
-        createToken(myRoom, myUserId, 'presenter', function(response) {
+        createToken(myRoom, myUserId, 'presenter', function (response) {
             var token = response;
             conference.join(token).then(resp => {
                 myId = resp.self.id;
                 myRoom = resp.id;
-                if(mediaUrl){
-                     startStreamingIn(myRoom, mediaUrl);
+                if (mediaUrl) {
+                    startStreamingIn(myRoom, mediaUrl);
                 }
                 if (isPublish !== 'false') {
-                    publishVideo(true,shareScreen,simulcast);
+                    publishVideo(true, shareScreen, simulcast);
                 }
                 var streams = resp.remoteStreams;
                 for (const stream of streams) {
-                    if(!subscribeForward){
-                      if ((stream.source.audio === 'mixed' || stream.source.video ===
-                        'mixed') && stream.id.indexOf('-presenters') > 0) {
-                        subscribeAndRenderVideo(stream);
-                      }
+                    if (!subscribeForward) {
+                        if ((stream.source.audio === 'mixed' || stream.source.video ===
+                            'mixed') && stream.id.indexOf('-presenters') > 0) {
+                            subscribeAndRenderVideo(stream);
+                        }
                     } else if (stream.source.audio !== 'mixed') {
                         subscribeAndRenderVideo(stream);
                     }
@@ -242,7 +232,7 @@ const runSocketIOSample = function() {
                 console.log('Streams in conference:', streams.length);
                 var participants = resp.participants;
                 console.log('Participants in conference: ' + participants.length);
-            }, function(err) {
+            }, function (err) {
                 console.error('server connection failed:', err);
                 if (err.message.indexOf('connect_error:') >= 0) {
                     const signalingHost = err.message.replace('connect_error:', '');
@@ -260,107 +250,133 @@ const runSocketIOSample = function() {
             });
         });
 
-        function calcNetwork(bytesSent,bytesReceived)
-        {
+        function calcNetwork(bytesSent, bytesReceived) {
             let speedSent = 0;
             let speedReceived = 0;
-            if(bytesReceivedGlobal)
-            {
-                speedReceived = Math.round((bytesReceived - bytesReceivedGlobal)/1024);
+            if (bytesReceivedGlobal && bytesReceived > bytesReceivedGlobal) {
+                speedReceived = Math.round((bytesReceived - bytesReceivedGlobal) / 1024);
             }
             bytesReceivedGlobal = bytesReceived;
             let download = document.querySelector('.network .download');
             download.innerHTML = `下行：${speedReceived} KB/s`;
-            if(bytesSentGlobal)
-            {
-                speedSent = Math.round((bytesSent - bytesSentGlobal)/1024);
+            if (bytesSentGlobal && bytesSent > bytesSentGlobal) {
+                speedSent = Math.round((bytesSent - bytesSentGlobal) / 1024);
             }
             bytesSentGlobal = bytesSent;
             let up = document.querySelector('.network .upload');
             up.innerHTML = `上行：${speedSent} KB/s`;
         }
 
-        setInterval(() => {
+        
+
+        setInterval(async () => {
             let bytesSent = 0;
             let bytesReceived = 0;
+            let stats;
 
-            subscirptionGlobal && subscirptionGlobal.getStats().then(stats=>{
-                stats.forEach((stat)=>{
-                    /^RTCIceCandidatePair/.test(stat['id']) && stat['bytesSent'] && (bytesSent = bytesSent + stat['bytesSent']);
-                    /^RTCIceCandidatePair/.test(stat['id']) && stat['bytesReceived'] && (bytesReceived = bytesReceived + stat['bytesReceived']);
-                });
-                publicationGlobal && publicationGlobal.getStats().then(stats=>{
-                    stats.forEach((stat)=>{
-                        /^RTCIceCandidatePair/.test(stat['id']) && stat['bytesSent'] && (bytesSent = bytesSent + stat['bytesSent']);
-                        /^RTCIceCandidatePair/.test(stat['id']) && stat['bytesReceived'] && (bytesReceived = bytesReceived + stat['bytesReceived']);
-                    });
-                    calcNetwork(bytesSent,bytesReceived);
-                });
-                if(!publicationGlobal)
-                {
-                    calcNetwork(bytesSent,bytesReceived);
-                }
-            });
-            if(!subscirptionGlobal)
-            {
-                calcNetwork(0,0);
+            function statForEach(stat){
+                /^RTCIceCandidatePair/.test(stat['id']) && stat['bytesSent'] && (bytesSent = bytesSent + stat['bytesSent']);
+                /^RTCIceCandidatePair/.test(stat['id']) && stat['bytesReceived'] && (bytesReceived = bytesReceived + stat['bytesReceived']);
             }
+
+            subscirptionGlobal && (stats = await subscirptionGlobal.getStats());
+            stats && stats.forEach(statForEach);
+            publicationGlobal && (stats = await publicationGlobal.getStats());
+            stats && stats.forEach(statForEach);
+            publicationScreenGlobal && (stats = await publicationScreenGlobal.getStats());
+            stats && stats.forEach(statForEach);
+
+            calcNetwork(bytesSent,bytesReceived);
         }, 1000);
 
         let close = document.querySelector('.systools .close');
         let exit = document.querySelector('.tools .exit');
         let desktopShare = document.querySelector('.tools .desktop');
-        exit.onclick = close.onclick = ()=>{
+        exit.onclick = close.onclick = () => {
             try {
                 conference && (conference.leave());
                 publicationGlobal && publicationGlobal.stop();
                 subscirptionGlobal && subscirptionGlobal.stop();
-            } catch (_) {
-                
-            }
+            } catch (_) {}
             conference = publicationGlobal = subscirptionGlobal = null;
             let v = document.querySelector('.video-container .playRTC');
             v && (v.srcObject = null);
             ipcRenderer.send("close-win");
         };
 
-        desktopShare.onclick = ()=>{
-              let mediaStream;
-              desktopCapturer.getSources({ types: ['screen'] }).then(async sources => {
-                  mediaStream = await navigator.mediaDevices.getUserMedia({
-                    audio: false,
-                    video: {
-                      mandatory: {
+        window.startShareScreen = async function startShareScreen(screenId)
+        {
+            let screenDlg = document.querySelector('.screen-dialog');
+            if(screenDlg.style.display == 'block')
+            {
+                screenDlg.style.display = 'none';
+                screenDlg.innerHTML = '';
+            }
+            let mediaStream;
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                    mandatory: {
                         chromeMediaSource: 'screen',
-                        chromeMediaSourceId: sources[0].id,
+                        chromeMediaSourceId: screenId,
                         minWidth: 1280,
                         maxWidth: 1920,
                         minHeight: 720,
                         maxHeight: 1920
-                      }
                     }
-                  });
-                  let publishOption = {video:[{codec:{name:'h264',profile:'B'},maxBitrate:8000}]};
-                  let ScreenStream = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('screen-cast', 'screen-cast'));
-                  conference.publish(ScreenStream,publishOption).then(publication => {
-                      publicationScreenGlobal = publication;
-                      mixStream(myRoom, publication.id, ['common','presenters','rectangle']);
-                      publication.addEventListener('error', (err) => {
-                          console.log('Publication error: ' + err.error.message);
-                      });
+                }
+            });
+            let publishOption = { video: [{ codec: { name: 'h264', profile: 'B' }, maxBitrate: 5000 }] };
+            let ScreenStream = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('screen-cast', 'screen-cast'));
+            conference.publish(ScreenStream, publishOption).then(publication => {
+                publicationScreenGlobal = publication;
+                mixStream(myRoom, publication.id, ['common', 'presenters', 'rectangle']);
+                publication.addEventListener('error', (err) => {
+                    console.log('Publication error: ' + err.error.message);
+                });
 
-                      ipcRenderer.send('show-screen',publication.id);
+                ipcRenderer.send('show-screen', publication.id);
 
-                  },err =>{
-                      console.error('Failed to publish ScreenStream, ' + err);
-                      ScreenStream = null;
-                      publicationScreenGlobal = null;
-                  });
-              });
+            }, err => {
+                console.error('Failed to publish ScreenStream, ' + err);
+                ScreenStream = null;
+                publicationScreenGlobal = null;
+            });
+        }
+
+
+        desktopShare.onclick = () => {
+            
+            if(publicationScreenGlobal)
+            {
+                publicationScreenGlobal.stop();
+                publicationScreenGlobal = null;
+                ipcRenderer.send('show-screen-close');
+                return;
+            }
+
+            let screenDlg = document.querySelector('.screen-dialog');
+            if(screenDlg.style.display == 'block')
+            {
+                screenDlg.style.display = 'none';
+                screenDlg.innerHTML = '';
+                return;
+            }
+
+            desktopCapturer.getSources({ types: ['screen'] }).then(sources => {
+
+                screenDlg.innerHTML = '';
+                sources.forEach(source => {
+                    screenDlg.innerHTML += `<img class="screen-poster" onclick="startShareScreen('${source.id}')" src="${source.thumbnail.toDataURL()}" />`;
+                });
+                screenDlg.style.display = 'block';
+                return;
+                
+            });
         };
     };
 };
-window.onbeforeunload = function(event){
+window.onbeforeunload = function (event) {
     conference && conference.leave();
     publicationGlobal && publicationGlobal.stop();
     subscirptionGlobal && subscirptionGlobal.stop();

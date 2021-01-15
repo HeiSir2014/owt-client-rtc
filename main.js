@@ -98,39 +98,45 @@ let logger;
             event.preventDefault()
             shell.openExternal(url);
         });
-        mainWindow.webContents.on('ipc-message',(e,channel,data)=>{
-            if (channel === 'close-win') {
-                mainWindow.close();
-            }
-            else if(channel === 'show-screen'){
-                if(screenWindow)
-                {
-                    screenWindow.close();
-                    screenWindow = null;
-                }
-                screenWindow = new BrowserWindow({
-                    width: 1280,
-                    height: 720,
-                    backgroundColor: '#ff2e2c29',
-                    skipTaskbar: false,
-                    transparent: false, frame: false, resizable: true,
-                    webPreferences: {
-                        nodeIntegration: true,
-                        spellcheck: false,
-                        webSecurity:!isDev
-                    },
-                    icon: path.join(__dirname, 'static/icon/logo.png'),
-                    alwaysOnTop: false,
-                    hasShadow: false,
-                });
-                screenWindow.setMenu(null);
-                let p = JSON.parse(JSON.stringify(param));
-                p['streamId'] = data;
-                screenWindow.loadFile( path.join(__dirname, 'static/screen.html'),{ query:p });
-                isDev && screenWindow.openDevTools();
-                screenWindow.moveTop();
-            }
-        });
+        mainWindow.webContents.on('ipc-message',ipcMessageFun);
 
     });
 })();
+
+
+function ipcMessageFun(e,channel,data){
+    let win = BrowserWindow.fromId(e.frameId);
+    if(win == null) return;
+    if (channel === 'close-win') {
+        win.close();
+    }
+    else if(channel === 'show-screen'){
+        screenWindow && (screenWindow.close());
+        screenWindow = null;
+        screenWindow = new BrowserWindow({
+            width: 1280,
+            height: 720,
+            backgroundColor: '#ff2e2c29',
+            skipTaskbar: false,
+            transparent: false, frame: false, resizable: true,
+            webPreferences: {
+                nodeIntegration: true,
+                spellcheck: false,
+                webSecurity:!isDev
+            },
+            icon: path.join(__dirname, 'static/icon/logo.png'),
+            alwaysOnTop: false,
+            hasShadow: false,
+        });
+        screenWindow.setMenu(null);
+        let p = JSON.parse(JSON.stringify(param));
+        p['streamId'] = data;
+        screenWindow.loadFile( path.join(__dirname, 'static/screen.html'),{ query:p });
+        isDev && screenWindow.openDevTools();
+        screenWindow.moveTop();
+        screenWindow.webContents.on('ipc-message',ipcMessageFun);
+        screenWindow.on('closed',()=>{
+            screenWindow = null;
+        });
+    }
+}
