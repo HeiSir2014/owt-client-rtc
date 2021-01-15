@@ -114,21 +114,39 @@ const runSocketIOSample = function () {
         let subscirptionLocal = null;
         let $video = document.querySelector('.video-container .playRTC');
         const videoOptions = {};
-            videoOptions.codecs = [{ name: "h264", profile: "CB" }];
-            videoOptions.resolution = stream.settings.video[0].resolution;
+        videoOptions.codecs = [{ name: "h264", profile: "CB" }];
+        videoOptions.resolution = stream.settings.video[0].resolution;
         conference.subscribe(stream, {
             video: videoOptions
         }).then((subscription) => {
-                mixStreamGlobal = stream;
-                subscirptionLocal = subscription;
-                subscirptionGlobal = subscirptionLocal;
-                $video.srcObject = stream.mediaStream;
-            }, (err) => {
-                mixStreamGlobal = null;
-                subscirptionLocal = null;
-                subscirptionGlobal = null;
-                console.log('subscribe failed', err);
-            });
+            mixStreamGlobal = stream;
+            subscirptionLocal = subscription;
+            subscirptionGlobal = subscirptionLocal;
+            $video.srcObject = stream.mediaStream;
+
+
+
+            if(false)
+            {
+                function gotDevices(deviceInfos) {
+                    console.log(deviceInfos)
+                    deviceInfos.forEach(deviceInfo => {
+                        if('audiooutput' == deviceInfo.kind && 'default' == deviceInfo.deviceId)
+                        {
+                            $video.setSinkId(deviceInfo.deviceId);
+                        }
+                    })
+                }
+                navigator.mediaDevices.enumerateDevices().then(gotDevices);
+            }
+
+
+        }, (err) => {
+            mixStreamGlobal = null;
+            subscirptionLocal = null;
+            subscirptionGlobal = null;
+            console.log('subscribe failed', err);
+        });
         stream.addEventListener('ended', () => {
             $video.srcObject = null;
             mixStreamGlobal = null;
@@ -169,7 +187,7 @@ const runSocketIOSample = function () {
         let mediaStream;
         Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
             audioConstraints, videoConstraints)).then(stream => {
-                let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 4000}] };
+                let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 4000 }] };
                 mediaStream = stream;
                 localStream = new Owt.Base.LocalStream(
                     mediaStream, new Owt.Base.StreamSourceInfo(
@@ -220,7 +238,7 @@ const runSocketIOSample = function () {
                     else if (stream.origin !== myId && stream.source
                         && stream.source.video
                         && stream.source.video == 'screen-cast') {
-                        ipcRenderer.send('show-screen',stream.id);
+                        ipcRenderer.send('show-screen', stream.id);
                     }
                 }
                 console.log('Streams in conference:', streams.length);
@@ -261,14 +279,14 @@ const runSocketIOSample = function () {
             up.innerHTML = `上行：${speedSent} KB/s`;
         }
 
-        
+
 
         setInterval(async () => {
             let bytesSent = 0;
             let bytesReceived = 0;
             let stats;
 
-            function statForEach(stat){
+            function statForEach(stat) {
                 /^RTCIceCandidatePair/.test(stat['id']) && stat['bytesSent'] && (bytesSent = bytesSent + stat['bytesSent']);
                 /^RTCIceCandidatePair/.test(stat['id']) && stat['bytesReceived'] && (bytesReceived = bytesReceived + stat['bytesReceived']);
             }
@@ -280,7 +298,7 @@ const runSocketIOSample = function () {
             publicationScreenGlobal && (stats = await publicationScreenGlobal.getStats());
             stats && stats.forEach(statForEach);
 
-            calcNetwork(bytesSent,bytesReceived);
+            calcNetwork(bytesSent, bytesReceived);
         }, 1000);
 
         let close = document.querySelector('.systools .close');
@@ -292,18 +310,16 @@ const runSocketIOSample = function () {
                 conference && (conference.leave());
                 publicationGlobal && publicationGlobal.stop();
                 subscirptionGlobal && subscirptionGlobal.stop();
-            } catch (_) {}
+            } catch (_) { }
             conference = publicationGlobal = subscirptionGlobal = null;
             let v = document.querySelector('.video-container .playRTC');
             v && (v.srcObject = null);
             ipcRenderer.send("close-win");
         };
 
-        window.startShareScreen = async function startShareScreen(screenId)
-        {
+        window.startShareScreen = async function startShareScreen(screenId) {
             let screenDlg = document.querySelector('.screen-dialog');
-            if(screenDlg.style.display == 'block')
-            {
+            if (screenDlg.style.display == 'block') {
                 screenDlg.style.display = 'none';
                 screenDlg.innerHTML = '';
             }
@@ -341,9 +357,8 @@ const runSocketIOSample = function () {
 
 
         desktopShare.onclick = () => {
-            
-            if(publicationScreenGlobal)
-            {
+
+            if (publicationScreenGlobal) {
                 publicationScreenGlobal.stop();
                 publicationScreenGlobal = null;
                 ipcRenderer.send('show-screen-close');
@@ -351,8 +366,7 @@ const runSocketIOSample = function () {
             }
 
             let screenDlg = document.querySelector('.screen-dialog');
-            if(screenDlg.style.display == 'block')
-            {
+            if (screenDlg.style.display == 'block') {
                 screenDlg.style.display = 'none';
                 screenDlg.innerHTML = '';
                 return;
@@ -366,21 +380,19 @@ const runSocketIOSample = function () {
                 });
                 screenDlg.style.display = 'block';
                 return;
-                
+
             });
         };
 
         window.layoutIndex = 0;
-        changeLayout.onclick = (e)=>{
-            if(subscirptionGlobal)
-            {
+        changeLayout.onclick = (e) => {
+            if (subscirptionGlobal) {
                 var layouts = [
-                    [{"region":[{"id":"1","area":{"height":"1","width":"1","top":"0","left":"0"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"1","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"1/4","width":"1/4","top":"3/4","left":"3/4"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"1279/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"539/1080","width":"639/1920","top":"0","left":"1281/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"539/1080","width":"639/1920","top":"541/1080","left":"1281/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"1279/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"359/1080","width":"639/1920","top":"0","left":"1281/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"358/1080","width":"639/1920","top":"361/1080","left":"1281/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"359/1080","width":"639/1920","top":"721/1080","left":"1281/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"1439/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"269/1080","width":"479/1920","top":"0","left":"1441/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"268/1080","width":"479/1920","top":"271/1080","left":"1441/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"268/1080","width":"479/1920","top":"541/1080","left":"1441/1920"},"shape":"rectangle"},{"id":"5","area":{"height":"269/1080","width":"479/1920","top":"811/1080","left":"1441/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"719/1080","width":"1279/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"359/1080","width":"639/1920","top":"0","left":"1281/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"358/1080","width":"639/1920","top":"361/1080","left":"1281/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"358/1080","width":"639/1920","top":"721/1080","left":"1281/1920"},"shape":"rectangle"},{"id":"5","area":{"height":"359/1080","width":"639/1920","top":"721/1080","left":"641/1920"},"shape":"rectangle"},{"id":"6","area":{"height":"359/1080","width":"639/1920","top":"721/1080","left":"0"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"809/1080","width":"1439/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"269/1080","width":"479/1920","top":"0","left":"481/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"268/1080","width":"479/1920","top":"281/1080","left":"1441/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"268/1080","width":"479/1920","top":"541/1080","left":"1441/1920"},"shape":"rectangle"},{"id":"5","area":{"height":"268/1080","width":"479/1920","top":"811/1080","left":"1441/1920"},"shape":"rectangle"},{"id":"6","area":{"height":"269/1080","width":"479/1920","top":"811/1080","left":"961/1920"},"shape":"rectangle"},{"id":"7","area":{"height":"269/1080","width":"479/1920","top":"811/1080","left":"481/1920"},"shape":"rectangle"},{"id":"8","area":{"height":"269/1080","width":"479/1920","top":"811/1080","left":"0"},"shape":"rectangle"}]}],
-                    [{"region":[{"id":"1","area":{"height":"1","width":"1","top":"0","left":"0"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"959/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"1","width":"959/1920","top":"0","left":"961/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"959/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"959/1920","width":"959/1920","top":"0","left":"961/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"539/1080","width":"959/1920","top":"541/1080","left":"961/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"539/1080","width":"959/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"539/1080","width":"959/1920","top":"0","left":"961/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"538/1080","width":"959/1920","top":"541/1080","left":"0"},"shape":"rectangle"},{"id":"4","area":{"height":"539/1080","width":"959/1920","top":"541/1080","left":"961/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"539/1080","width":"959/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"539/1080","width":"959/1920","top":"0","left":"961/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"538/1080","width":"639/1920","top":"541/1080","left":"0"},"shape":"rectangle"},{"id":"4","area":{"height":"539/1080","width":"639/1920","top":"541/1080","left":"641/1920"},"shape":"rectangle"},{"id":"5","area":{"height":"539/1080","width":"639/1920","top":"541/1080","left":"1281/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"539/1080","width":"639/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"539/1080","width":"638/1920","top":"0","left":"641/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"539/1080","width":"639/1920","top":"0","left":"1281/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"539/1080","width":"639/1920","top":"541/1080","left":"0"},"shape":"rectangle"},{"id":"5","area":{"height":"539/1080","width":"638/1920","top":"541/1080","left":"641/1920"},"shape":"rectangle"},{"id":"6","area":{"height":"539/1080","width":"639/1920","top":"541/1080","left":"1281/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"359/1080","width":"639/1920","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"359/1080","width":"638/1920","top":"0","left":"641/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"359/1080","width":"639/1920","top":"0","left":"1281/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"358/1080","width":"639/1920","top":"361/1080","left":"0"},"shape":"rectangle"},{"id":"5","area":{"height":"358/1080","width":"638/1920","top":"361/1080","left":"641/1920"},"shape":"rectangle"},{"id":"6","area":{"height":"358/1080","width":"639/1920","top":"361/1080","left":"1281/1920"},"shape":"rectangle"},{"id":"7","area":{"height":"359/1080","width":"639/1920","top":"721/1080","left":"0"},"shape":"rectangle"},{"id":"8","area":{"height":"359/1080","width":"638/1920","top":"721/1080","left":"641/1920"},"shape":"rectangle"},{"id":"9","area":{"height":"359/1080","width":"639/1920","top":"721/1080","left":"1281/1920"},"shape":"rectangle"}]}],
+                    [{ "region": [{ "id": "1", "area": { "height": "1", "width": "1", "top": "0", "left": "0" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "1/4", "width": "1/4", "top": "3/4", "left": "3/4" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1279/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "539/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1279/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1439/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "269/1080", "width": "479/1920", "top": "0", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "268/1080", "width": "479/1920", "top": "271/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "268/1080", "width": "479/1920", "top": "541/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "1441/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "719/1080", "width": "1279/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "358/1080", "width": "639/1920", "top": "721/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "0" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "809/1080", "width": "1439/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "269/1080", "width": "479/1920", "top": "0", "left": "481/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "268/1080", "width": "479/1920", "top": "281/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "268/1080", "width": "479/1920", "top": "541/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "268/1080", "width": "479/1920", "top": "811/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "961/1920" }, "shape": "rectangle" }, { "id": "7", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "481/1920" }, "shape": "rectangle" }, { "id": "8", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "0" }, "shape": "rectangle" }] }],
+                    [{ "region": [{ "id": "1", "area": { "height": "1", "width": "1", "top": "0", "left": "0" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "959/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "1", "width": "959/1920", "top": "0", "left": "961/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "959/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "959/1920", "width": "959/1920", "top": "0", "left": "961/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "539/1080", "width": "959/1920", "top": "541/1080", "left": "961/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "539/1080", "width": "959/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "539/1080", "width": "959/1920", "top": "0", "left": "961/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "538/1080", "width": "959/1920", "top": "541/1080", "left": "0" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "539/1080", "width": "959/1920", "top": "541/1080", "left": "961/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "539/1080", "width": "959/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "539/1080", "width": "959/1920", "top": "0", "left": "961/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "538/1080", "width": "639/1920", "top": "541/1080", "left": "0" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "539/1080", "width": "639/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "539/1080", "width": "638/1920", "top": "0", "left": "641/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "539/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "0" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "539/1080", "width": "638/1920", "top": "541/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "359/1080", "width": "638/1920", "top": "0", "left": "641/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "0" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "358/1080", "width": "638/1920", "top": "361/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "7", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "0" }, "shape": "rectangle" }, { "id": "8", "area": { "height": "359/1080", "width": "638/1920", "top": "721/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "9", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "1281/1920" }, "shape": "rectangle" }] }],
                 ];
                 layoutIndex = layoutIndex + 1;
-                if(layoutIndex >= layouts.length)
-                {
+                if (layoutIndex >= layouts.length) {
                     layoutIndex = 0;
                 }
 
@@ -389,12 +401,12 @@ const runSocketIOSample = function () {
                     let regions = __["region"];
                     let _ = [];
                     //if(regions.length == 5) return;
-                    regions.forEach(region =>{
-                        _.push({region:region});
+                    regions.forEach(region => {
+                        _.push({ region: region });
                     });
                     values.push(_);
                 });
-                setLayoutStream(myRoom,mixStreamGlobal.id,values);
+                setLayoutStream(myRoom, mixStreamGlobal.id, values);
             }
         }
     };
