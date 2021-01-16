@@ -57,7 +57,7 @@ let logger;
         logger.info('loadExtension success');
 
         let param = {
-            serverURL: '',
+            serverURL: Buffer.from('aHR0cHM6Ly96aGliby5kamRldmVsb3Blci5jbjozMDA0Lw==','base64').toString(),
             room:'8888',
             userId:'any',
             userNick:'游客'
