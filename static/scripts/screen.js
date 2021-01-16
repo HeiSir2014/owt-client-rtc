@@ -29,8 +29,10 @@ const runSocketIOSample = function() {
     function subscribeAndRenderVideo(stream){
         let subscirptionLocal=null;
         let $video = document.querySelector('.video-container .playRTC');
-        stream.source.audio
-        conference.subscribe(stream,{video:stream.settings.video[0].resolution,audio:stream.source.audio?true:false})
+        videoOptions.codecs = [{ name: "h264", profile: "CB" }];
+        videoOptions.resolutions = [stream.settings.video[0].resolution];
+        videoOptions.bitrateMultipliers  = [1];
+        conference.subscribe(stream,{video:videoOptions,audio:stream.source.audio?true:false})
         .then((subscription)=>{
             subscirptionLocal = subscription;
             subscirptionGlobal = subscirptionLocal;

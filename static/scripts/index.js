@@ -39,28 +39,11 @@ var bytesReceivedGlobal = 0;
 const runSocketIOSample = function () {
 
     let localStream;
-    let showedRemoteStreams = [];
+    let ScreenStream;
     let myId;
-    let subscriptionForMixedStream;
     let myRoom;
     let myUserId;
     let myUserNick;
-
-    function resolutionToText(resolution) {
-        if (resolution.width >= 1920 && resolution.height >= 1080) {
-            return "蓝光";
-        }
-        if (resolution.width == 1280 && resolution.height == 720) {
-            return "超清";
-        }
-        if (resolution.width == 852 && resolution.height == 480) {
-            return "高清";
-        }
-        if (resolution.width == 640 && resolution.height == 360) {
-            return "标清";
-        }
-        return "";
-    }
 
     function getParameterByName(name) {
         name = name.replace(/[\[]/, '\\\[').replace(/[\]]/, '\\\]');
@@ -70,77 +53,22 @@ const runSocketIOSample = function () {
             /\+/g, ' '));
     }
 
-    var subscribeForward = getParameterByName('forward') === 'true' ? true : false;
-    var isSelf = getParameterByName('self') === 'false' ? false : true;
-    conference = new Owt.Conference.ConferenceClient();
-    function createResolutionButtons(stream, subscribeResolutionCallback) {
-        let $p = $(`#${stream.id}resolutions`);
-        let $bitContainer = $(`#${stream.id}resolutions .bitrate-container`);
-        if ($p.length === 0) {
-            $p = $(`<div class="video-container" id="${stream.id}resolutions"><div class="bitrate-container"><select class="bitrateSelects"></select></div>`);
-            $p.appendTo($('body'));
-            $bitContainer = $(`#${stream.id}resolutions .bitrate-container .bitrateSelects`);
-        }
-        // Resolutions from settings.
-        for (const videoSetting of stream.settings.video) {
-            const resolution = videoSetting.resolution;
-            if (resolution && resolutionToText(resolution) != "") {
-                const button = $('<option/>', {
-                    text: resolutionToText(resolution),
-                    class: 'bitrateOption',
-                    click: () => {
-                        subscribeResolutionCallback(stream, resolution);
-                    }
-                });
-                button.prependTo($bitContainer);
-            }
-        }
-        // Resolutions from extraCapabilities.
-        for (const resolution of stream.extraCapabilities.video.resolutions.reverse()) {
-            if (resolutionToText(resolution) != "") {
-                const button = $('<option/>', {
-                    text: resolutionToText(resolution),
-                    class: 'bitrateOption',
-                    click: () => {
-                        subscribeResolutionCallback(stream, resolution);
-                    }
-                });
-                button.prependTo($bitContainer);
-            }
-        };
-        return $p;
-    }
+    
     function subscribeAndRenderVideo(stream) {
         let subscirptionLocal = null;
         let $video = document.querySelector('.video-container .playRTC');
         const videoOptions = {};
         videoOptions.codecs = [{ name: "h264", profile: "CB" }];
-        videoOptions.resolution = stream.settings.video[0].resolution;
+        videoOptions.resolutions = [stream.settings.video[0].resolution];
+        videoOptions.bitrateMultipliers  = [1.2];
         conference.subscribe(stream, {
+            audio: stream.source.audio?true:false,
             video: videoOptions
         }).then((subscription) => {
             mixStreamGlobal = stream;
             subscirptionLocal = subscription;
             subscirptionGlobal = subscirptionLocal;
             $video.srcObject = stream.mediaStream;
-
-
-
-            if(false)
-            {
-                function gotDevices(deviceInfos) {
-                    console.log(deviceInfos)
-                    deviceInfos.forEach(deviceInfo => {
-                        if('audiooutput' == deviceInfo.kind && 'default' == deviceInfo.deviceId)
-                        {
-                            $video.setSinkId(deviceInfo.deviceId);
-                        }
-                    })
-                }
-                navigator.mediaDevices.enumerateDevices().then(gotDevices);
-            }
-
-
         }, (err) => {
             mixStreamGlobal = null;
             subscirptionLocal = null;
@@ -156,31 +84,12 @@ const runSocketIOSample = function () {
         });
     }
 
-    conference.addEventListener('streamadded', (event) => {
-        console.log('A new stream is added ', event.stream.id);
-        //isSelf = isSelf?isSelf:event.stream.id != publicationGlobal.id;
-        //mixStream(myRoom, event.stream.id, ['common','presenters']);
-        if (event.stream.origin !== myId && event.stream.source
-            && event.stream.source.video
-            && event.stream.source.video == 'screen-cast') {
-            ipcRenderer.send('show-screen', event.stream.id);
-        }
-        event.stream.addEventListener('ended', () => {
-            console.log(event.stream.id + ' is ended.');
-        });
-    });
+    
 
     function publishVideo(Is720P, shareScreen, simulcast) {
         // audioConstraintsForMic
         let audioConstraints = new Owt.Base.AudioTrackConstraints(Owt.Base.AudioSourceInfo.MIC);
-        // videoConstraintsForCamera
         let videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
-        if (shareScreen) {
-            // audioConstraintsForScreen
-            audioConstraints = new Owt.Base.AudioTrackConstraints(Owt.Base.AudioSourceInfo.SCREENCAST);
-            // videoConstraintsForScreen
-            videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.SCREENCAST);
-        }
         if (Is720P) {
             videoConstraints.resolution = { width: 1280, height: 720 };
         }
@@ -196,11 +105,15 @@ const runSocketIOSample = function () {
                     publicationGlobal = publication;
                     mixStream(myRoom, publication.id, ['common', 'presenters'])
                     publication.addEventListener('error', (err) => {
+                        localStream && localStream.mediaStream && destroyMediaStream(localStream.mediaStream);
+                        localStream = null;
                         console.log('Publication error: ' + err.error.message);
                     });
                 });
             }, err => {
                 publicationGlobal = null;
+                localStream && localStream.mediaStream && destroyMediaStream(localStream.mediaStream);
+                localStream = null;
                 console.error('Failed to create MediaStream, ' +
                     err);
                 if (Is720P) {
@@ -209,26 +122,33 @@ const runSocketIOSample = function () {
             });
     }
 
+    function destroyMediaStream(mediaStream)
+    {
+        try {
+            let audioTracks,videoTracks;
+            mediaStream && (audioTracks = mediaStream.getAudioTracks()),
+            mediaStream && (videoTracks = mediaStream.getVideoTracks()),
+            audioTracks && (audioTracks.forEach(t=>{ t.stop(); mediaStream.removeTrack(t);})),
+            videoTracks && (videoTracks.forEach(t=>{ t.stop(); mediaStream.removeTrack(t);})),
+            (mediaStream = null);
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
     window.onload = function () {
         var simulcast = getParameterByName('simulcast') || false;
         var shareScreen = getParameterByName('screen') || false;
         myRoom = getParameterByName('room');
         myUserId = getParameterByName('userId');
         myUserNick = getParameterByName('userNick');
-        var isHttps = (location.protocol === 'https:');
-        var mediaUrl = getParameterByName('url');
-        var isPublish = getParameterByName('publish');
         createToken(myRoom, myUserId, 'presenter', function (response) {
             var token = response;
+            conference = new Owt.Conference.ConferenceClient();
             conference.join(token).then(resp => {
                 myId = resp.self.id;
                 myRoom = resp.id;
-                if (mediaUrl) {
-                    startStreamingIn(myRoom, mediaUrl);
-                }
-                if (isPublish !== 'false') {
-                    publishVideo(true, shareScreen, simulcast);
-                }
+                publishVideo(true, shareScreen, simulcast);
                 var streams = resp.remoteStreams;
                 for (const stream of streams) {
                     if ((stream.source.audio === 'mixed' || stream.source.video ===
@@ -247,18 +167,24 @@ const runSocketIOSample = function () {
             }, function (err) {
                 console.error('server connection failed:', err);
                 if (err.message.indexOf('connect_error:') >= 0) {
-                    const signalingHost = err.message.replace('connect_error:', '');
-                    const signalingUi = 'signaling';
-                    removeUi(signalingUi);
-                    let $p = $(`<div id=${signalingUi}> </div>`);
-                    const anchor = $('<a/>', {
-                        text: 'Click this for testing certificate and refresh',
-                        target: '_blank',
-                        href: `${signalingHost}/socket.io/`
-                    });
-                    anchor.appendTo($p);
+                    const div = $('<div>网络错误</div>');
+                    div.appendTo($p);
                     $p.appendTo($('body'));
                 }
+            });
+
+            conference.addEventListener('streamadded', (event) => {
+                console.log('A new stream is added ', event.stream.id);
+                //isSelf = isSelf?isSelf:event.stream.id != publicationGlobal.id;
+                //mixStream(myRoom, event.stream.id, ['common','presenters']);
+                if (event.stream.origin !== myId && event.stream.source
+                    && event.stream.source.video
+                    && event.stream.source.video == 'screen-cast') {
+                    ipcRenderer.send('show-screen', event.stream.id);
+                }
+                event.stream.addEventListener('ended', () => {
+                    console.log(event.stream.id + ' is ended.');
+                });
             });
         });
 
@@ -305,6 +231,8 @@ const runSocketIOSample = function () {
         let exit = document.querySelector('.tools .exit');
         let desktopShare = document.querySelector('.tools .desktop');
         let changeLayout = document.querySelector('.tools .layout');
+        let audioButton = document.querySelector('.tools .audio');
+        let videoButton = document.querySelector('.tools .video');
         exit.onclick = close.onclick = () => {
             try {
                 conference && (conference.leave());
@@ -338,17 +266,25 @@ const runSocketIOSample = function () {
                 }
             });
             let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 4000 }] };
-            let ScreenStream = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('screen-cast', 'screen-cast'));
+            ScreenStream = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('screen-cast', 'screen-cast'));
             conference.publish(ScreenStream, publishOption).then(publication => {
                 publicationScreenGlobal = publication;
+                
+                desktopShare.querySelector('img').src = 'icon/desktop-share_no.png';
                 mixStream(myRoom, publication.id, ['common']);
                 publication.addEventListener('error', (err) => {
+                    
+                    ScreenStream && ScreenStream.mediaStream && destroyMediaStream(ScreenStream.mediaStream);
+                    ScreenStream = null;
                     console.log('Publication error: ' + err.error.message);
+
+                    desktopShare.querySelector('img').src = 'icon/desktop-share.png';
                 });
 
                 //ipcRenderer.send('show-screen', publication.id);
 
             }, err => {
+                ScreenStream && ScreenStream.mediaStream && destroyMediaStream(ScreenStream.mediaStream);
                 console.error('Failed to publish ScreenStream, ' + err);
                 ScreenStream = null;
                 publicationScreenGlobal = null;
@@ -359,8 +295,11 @@ const runSocketIOSample = function () {
         desktopShare.onclick = () => {
 
             if (publicationScreenGlobal) {
+                ScreenStream && ScreenStream.mediaStream && destroyMediaStream(ScreenStream.mediaStream);
+                ScreenStream = null;
                 publicationScreenGlobal.stop();
                 publicationScreenGlobal = null;
+                desktopShare.querySelector('img').src = 'icon/desktop-share.png';
                 ipcRenderer.send('show-screen-close');
                 return;
             }
@@ -409,6 +348,23 @@ const runSocketIOSample = function () {
                 setLayoutStream(myRoom, mixStreamGlobal.id, values);
             }
         }
+
+        audioButton.onclick = (e)=>{
+            let track;
+            let enabled = false;
+            publicationGlobal && localStream && localStream.mediaStream && (track = localStream.mediaStream.getAudioTracks()[0]);
+            track && (track.enabled = !track.enabled) && (enabled = track.enabled);
+            audioButton.querySelector('img').src = enabled ? 'icon/mic_no.png':'icon/mic.png';
+        }
+
+        videoButton.onclick = (e)=>{
+            let track;
+            let enabled = false;
+            publicationGlobal  && localStream && localStream.mediaStream && (track = localStream.mediaStream.getVideoTracks()[0]);
+            track && (track.enabled = !track.enabled) && (enabled = track.enabled);
+            videoButton.querySelector('img').src = enabled ? 'icon/camera_no.png':'icon/camera.png';
+        }
+
     };
 };
 window.onbeforeunload = function (event) {
