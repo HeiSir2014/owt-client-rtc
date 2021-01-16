@@ -28,8 +28,8 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 
 @keyframes toolsAnimation{
-    from {filter: opacity(0.15);}
-    to {filter: opacity(0.85);}
+    from {filter: opacity(0.5);}
+    to {filter: opacity(1);}
 }
 
 .video-container .tools{
@@ -38,18 +38,18 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     height: 60px;
     bottom: 15%;
     margin: 0 auto;
-    background: #404040AA;
+    background: #404040;
     border-radius: 5px;
     box-shadow: 0px 0px 6px 1px #444;
     overflow: hidden;
     padding: 0 10px;
-    filter: opacity(0.15);
+    filter: opacity(0.5);
     -webkit-app-region: no-drag;
 }
 
 .video-container .tools:hover{
     animation: toolsAnimation 1s;
-    filter: opacity(0.85);
+    filter: opacity(1);
 }
 
 .video-container .tools:hover >*{
@@ -67,7 +67,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     box-sizing: content-box;
     display: inline-block;
     vertical-align: middle;
-    filter:blur(2px);
+    filter:blur(0px);
 }
 
 .video-container .tools > *:hover{

@@ -1,0 +1,166 @@
+html,body{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+}
+html,body *{
+    user-select:none;
+}
+
+div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+
+.heisir{
+    padding: 0;
+    margin: 0;
+    box-shadow: inset 0px 0px 25px 0px #fff;
+    position: relative;
+    overflow: hidden;
+    background-color: #f0f8ff;
+    -webkit-app-region: drag;
+}
+
+
+.heisir .bk{
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.heisir .bk .room{
+    position:absolute;
+    top:calc((100% - 240px) / 2);
+    height: 240px;
+    left: 5%;
+}
+
+
+.heisir .header{
+    width: 100%;
+    height: 32px;
+    position: absolute;
+    z-index: 2;
+}
+
+.heisir .header .systools{
+    width: 32px;
+    right: 0px;
+    position: absolute;
+    text-align: left;
+    height: 100%;
+    box-sizing: content-box;
+    overflow: hidden;
+    -webkit-app-region: no-drag;
+}
+
+.heisir .header .systools:hover{
+    background-color: rgb(177, 0, 0);
+}
+
+.heisir .header .systools .close{
+    background-image: url(../icon/close.png);
+    height: 100%;
+    width: 14px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    vertical-align: middle;
+    margin: 0 auto;
+    background-position: center;
+}
+
+.heisir .header .systools .close:hover{
+    background-image: url(../icon/close-hover.png);
+}
+
+.heisir .content{
+    position:absolute;
+    top: 10%;
+    right: 5%;
+    -webkit-app-region: no-drag;
+    width: 300px;
+    height: 80%;
+    background-color: white;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 2px 2px 5px 1px #666;
+    font-size: 14px;
+    font-family: "Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","微软雅黑",Arial,sans-serif;
+}
+.heisir .content *{
+    font-size: 14px;
+    font-family: "Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","微软雅黑",Arial,sans-serif;
+    line-height: 1.0;
+}
+
+.heisir .content .line{
+    margin: 10px auto;
+    width: 80%;
+    display: block;
+    height: fit-content;
+    min-height: 14px;
+}
+
+.heisir .content .line > *{
+    width: 100%;
+    height: 100%;
+    padding: 0 5px;
+}
+
+.heisir .content .line input{
+    height: 32px;
+    margin: 0 auto;
+}
+
+.heisir .content .line input[type=text],.heisir .content .line input[type=number]{
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: #fff;
+    box-shadow: 1px 1px 2px 0px #666;
+}
+
+.heisir .content .line input[type=button]{
+    height: 42px;
+    border: 0;
+    border-radius: 20px;
+    background-color: #0079F2;
+    color: white;
+    cursor: pointer;
+    box-shadow: 1px 1px 2px 0px #666;
+}
+
+.heisir .content .line input[type=button]:hover{
+    font-size: 15px;
+    font-weight: 450;
+}
+
+.heisir .content .title{
+    margin: 40px auto;
+    font-size: 28px;
+    font-weight: 600;
+    text-shadow: 2px 1px #888;
+    text-align: center;
+    color: #333;
+}
+
+.heisir .content .msg{
+    color: tomato;
+}
+
+.heisir .content .copyright{
+    text-align: center;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+}
+
+.heisir .content .copyright a{
+    text-decoration: transparent;
+    color: gray;
+    font-size: 12px;
+}

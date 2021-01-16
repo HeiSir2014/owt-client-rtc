@@ -105,15 +105,14 @@ const runSocketIOSample = function () {
                     publicationGlobal = publication;
                     mixStream(myRoom, publication.id, ['common', 'presenters'])
                     publication.addEventListener('error', (err) => {
-                        localStream && localStream.mediaStream && destroyMediaStream(localStream.mediaStream);
-                        localStream = null;
+                        localStream && localStream.mediaStream && destroyMediaStream(localStream.mediaStream),(localStream = null);
                         console.log('Publication error: ' + err.error.message);
                     });
                 });
             }, err => {
                 publicationGlobal = null;
-                localStream && localStream.mediaStream && destroyMediaStream(localStream.mediaStream);
-                localStream = null;
+                localStream && localStream.mediaStream && destroyMediaStream(localStream.mediaStream),(localStream = null);
+                
                 console.error('Failed to create MediaStream, ' +
                     err);
                 if (Is720P) {
@@ -239,6 +238,8 @@ const runSocketIOSample = function () {
                 publicationGlobal && publicationGlobal.stop();
                 subscirptionGlobal && subscirptionGlobal.stop();
             } catch (_) { }
+            ScreenStream && ScreenStream.mediaStream && (destroyMediaStream(ScreenStream.mediaStream)),(ScreenStream = null);
+            localStream && localStream.mediaStream && destroyMediaStream(localStream.mediaStream),(localStream = null);
             conference = publicationGlobal = subscirptionGlobal = null;
             let v = document.querySelector('.video-container .playRTC');
             v && (v.srcObject = null);
@@ -274,8 +275,8 @@ const runSocketIOSample = function () {
                 mixStream(myRoom, publication.id, ['common']);
                 publication.addEventListener('error', (err) => {
                     
-                    ScreenStream && ScreenStream.mediaStream && destroyMediaStream(ScreenStream.mediaStream);
-                    ScreenStream = null;
+                    ScreenStream && ScreenStream.mediaStream && (destroyMediaStream(ScreenStream.mediaStream)),(ScreenStream = null);
+                    
                     console.log('Publication error: ' + err.error.message);
 
                     desktopShare.querySelector('img').src = 'icon/desktop-share.png';
@@ -284,9 +285,8 @@ const runSocketIOSample = function () {
                 //ipcRenderer.send('show-screen', publication.id);
 
             }, err => {
-                ScreenStream && ScreenStream.mediaStream && destroyMediaStream(ScreenStream.mediaStream);
+                ScreenStream && ScreenStream.mediaStream && (destroyMediaStream(ScreenStream.mediaStream)),(ScreenStream = null);
                 console.error('Failed to publish ScreenStream, ' + err);
-                ScreenStream = null;
                 publicationScreenGlobal = null;
             });
         }
@@ -295,8 +295,7 @@ const runSocketIOSample = function () {
         desktopShare.onclick = () => {
 
             if (publicationScreenGlobal) {
-                ScreenStream && ScreenStream.mediaStream && destroyMediaStream(ScreenStream.mediaStream);
-                ScreenStream = null;
+                ScreenStream && ScreenStream.mediaStream && (destroyMediaStream(ScreenStream.mediaStream)),(ScreenStream = null);
                 publicationScreenGlobal.stop();
                 publicationScreenGlobal = null;
                 desktopShare.querySelector('img').src = 'icon/desktop-share.png';

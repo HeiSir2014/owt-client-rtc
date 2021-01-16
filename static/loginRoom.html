@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多人实时互动</title>
+    <link rel="stylesheet" href="css/room.css">
+</head>
+<body class="heisir">
+    <div class="header">
+        <div class="systools">
+            <div class="close"></div>
+        </div>
+    </div>
+    <div class="bk"> 
+        <img class="room" src="imgs/room-bkg.svg"/>
+    </div>
+    <div class="content">
+        <div class="line title">多人实时互动</div>
+        <div class="line">房间号</div>
+        <div class="line"><input class="room" type="number" placeholder="请输入房间号" value=""/></div>
+        <div class="line">姓名 / 昵称</div>
+        <div class="line"><input class="nick" type="text" placeholder="请输入您的姓名/昵称" value=""/></div>
+        <div class="line msg"></div>
+        <div class="line"><input type="button" value="加  入"/></div>
+        <div class="line copyright"><a target="_blank" href="https://github.com/HeiSir2014/owt-client-rtc">© 2021 HeiSir OWT-Rtc</a></div>
+    </div>
+    <script>
+        const { ipcRenderer } = require('electron');
+        let roomTxt = document.querySelector('.content .room');
+        let nickTxt = document.querySelector('.content .nick');
+        let msgTxt = document.querySelector('.msg');
+        let joinBtn = document.querySelector('input[type=button]');
+
+        joinBtn && (joinBtn.onclick = (e)=>{
+            if(roomTxt.value == '' || nickTxt.value == '')
+            {
+                msgTxt.innerHTML = '请输入房间号或昵称';
+                return
+            }
+            ipcRenderer.send('joinRoom',{room:roomTxt.value,userId:nickTxt.value});
+        });
+
+        
+        let close = document.querySelector('.systools .close');
+        close.onclick = () => {
+            ipcRenderer.send("close-win");
+        };
+
+    </script>
+</body>
+</html>
