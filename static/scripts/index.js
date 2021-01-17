@@ -157,7 +157,7 @@ const runSocketIOSample = function () {
                     else if (stream.origin !== myId && stream.source
                         && stream.source.video
                         && stream.source.video == 'screen-cast') {
-                        ipcRenderer.send('show-screen', stream.id);
+                        ipcRenderer.send('show-screen', `${location.search}&streamId=${stream.id}`);
                     }
                 }
                 console.log('Streams in conference:', streams.length);
@@ -179,7 +179,7 @@ const runSocketIOSample = function () {
                 if (event.stream.origin !== myId && event.stream.source
                     && event.stream.source.video
                     && event.stream.source.video == 'screen-cast') {
-                    ipcRenderer.send('show-screen', event.stream.id);
+                    ipcRenderer.send('show-screen', `${location.search}&streamId=${event.stream.id}`);
                 }
                 event.stream.addEventListener('ended', () => {
                     console.log(event.stream.id + ' is ended.');
@@ -283,6 +283,7 @@ const runSocketIOSample = function () {
                 });
 
                 //ipcRenderer.send('show-screen', publication.id);
+                ipcRenderer.send('show-screen', `${location.search}&streamId=${publication.id}`);
 
             }, err => {
                 ScreenStream && ScreenStream.mediaStream && (destroyMediaStream(ScreenStream.mediaStream)),(ScreenStream = null);

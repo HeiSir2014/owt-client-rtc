@@ -149,10 +149,7 @@ function ipcMessageFun(e,channel,data){
         screenWindow && (screenWindow.close());
         screenWindow = null;
         screenWindow = CreateDefaultWin();
-        let param = getStartParam();
-        let p = JSON.parse(JSON.stringify(param));
-        p['streamId'] = data;
-        screenWindow.loadFile( path.join(__dirname, 'static/screen.html'),{ query:p });
+        screenWindow.loadFile( path.join(__dirname, 'static/screen.html'),{ search:data });
         screenWindow.moveTop();
         screenWindow.maximize();
         screenWindow.on('closed',()=>{
