@@ -145,7 +145,7 @@ function ipcMessageFun(e,channel,data){
     if (channel === 'close-win') {
         win.close();
     }
-    else if(channel === 'show-screen'){
+    else if(channel === 'show-screen' || (isDev && channel == 'show-screen-publish')){
         screenWindow && (screenWindow.close());
         screenWindow = null;
         screenWindow = CreateDefaultWin();

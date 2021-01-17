@@ -29,6 +29,7 @@ const runSocketIOSample = function() {
     function subscribeAndRenderVideo(stream){
         let subscirptionLocal=null;
         let $video = document.querySelector('.video-container .playRTC');
+        const videoOptions = {};
         videoOptions.codecs = [{ name: "h264", profile: "CB" }];
         videoOptions.resolutions = [stream.settings.video[0].resolution];
         videoOptions.bitrateMultipliers  = [1];

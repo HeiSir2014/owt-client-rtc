@@ -283,7 +283,7 @@ const runSocketIOSample = function () {
                 });
 
                 //ipcRenderer.send('show-screen', publication.id);
-                ipcRenderer.send('show-screen', `${location.search}&streamId=${publication.id}`);
+                ipcRenderer.send('show-screen-publish', `${location.search}&streamId=${publication.id}`);
 
             }, err => {
                 ScreenStream && ScreenStream.mediaStream && (destroyMediaStream(ScreenStream.mediaStream)),(ScreenStream = null);
