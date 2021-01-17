@@ -86,7 +86,7 @@ const runSocketIOSample = function () {
 
     
 
-    function publishVideo(Is720P, shareScreen, simulcast) {
+    function publishVideo(Is720P) {
         // audioConstraintsForMic
         let audioConstraints = new Owt.Base.AudioTrackConstraints(Owt.Base.AudioSourceInfo.MIC);
         let videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
@@ -116,7 +116,7 @@ const runSocketIOSample = function () {
                 console.error('Failed to create MediaStream, ' +
                     err);
                 if (Is720P) {
-                    publishVideo(false, shareScreen, simulcast);
+                    publishVideo(false);
                 }
             });
     }
@@ -136,8 +136,6 @@ const runSocketIOSample = function () {
     }
 
     window.onload = function () {
-        var simulcast = getParameterByName('simulcast') || false;
-        var shareScreen = getParameterByName('screen') || false;
         myRoom = getParameterByName('room');
         myUserId = getParameterByName('userId');
         myUserNick = getParameterByName('userNick');
@@ -147,7 +145,7 @@ const runSocketIOSample = function () {
             conference.join(token).then(resp => {
                 myId = resp.self.id;
                 myRoom = resp.id;
-                publishVideo(true, shareScreen, simulcast);
+                publishVideo(true);
                 var streams = resp.remoteStreams;
                 for (const stream of streams) {
                     if ((stream.source.audio === 'mixed' || stream.source.video ===
