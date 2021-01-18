@@ -73,6 +73,12 @@ let logger;
             mainWindow.on('closed', () => {
                 mainWindow = null;
             });
+            
+            mainWindow.once('ready-to-show',()=>{
+                mainWindow.focus();
+                mainWindow.moveTop();
+                mainWindow.maximize();
+            });
         }
     });
 })();
@@ -170,6 +176,11 @@ function ipcMessageFun(e,channel,data){
         mainWindow.loadFile( path.join(__dirname, 'static/index.html'),{ query:param });
         mainWindow.on('closed', () => {
             mainWindow = null;
+        });
+        mainWindow.once('ready-to-show',()=>{
+            mainWindow.focus();
+            mainWindow.moveTop();
+            mainWindow.maximize();
         });
         
         loginRoomWindow && (loginRoomWindow.close());

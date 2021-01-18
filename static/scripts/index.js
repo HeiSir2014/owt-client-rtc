@@ -96,7 +96,7 @@ const runSocketIOSample = function () {
         let mediaStream;
         Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
             audioConstraints, videoConstraints)).then(stream => {
-                let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 4000 }] };
+                let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 2500 }] };
                 mediaStream = stream;
                 localStream = new Owt.Base.LocalStream(
                     mediaStream, new Owt.Base.StreamSourceInfo(
@@ -264,7 +264,7 @@ const runSocketIOSample = function () {
                     }
                 }
             });
-            let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 4000 }] };
+            let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 8000 }] };
             ScreenStream = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('screen-cast', 'screen-cast'));
             conference.publish(ScreenStream, publishOption).then(publication => {
                 publicationScreenGlobal = publication;
