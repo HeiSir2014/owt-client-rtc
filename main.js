@@ -132,6 +132,7 @@ function CreateDefaultWin(options)
     let win = new BrowserWindow(opt);
     win.setMenu(null);
     isDev && win.openDevTools();
+    //win.openDevTools();
     win.webContents.on('ipc-message',ipcMessageFun);
     win.webContents.on('new-window', (event, url, frameName, disposition, options) => {
         event.preventDefault();
