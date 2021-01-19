@@ -258,7 +258,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 
 .heisir .desktop .screen-dialog{
     display: none;
-    position: fixed;
+    position: absolute;
     width: 700px;
     background-color: #d8d8d8ab;
     bottom: 72px;
@@ -267,7 +267,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     padding: 10px;
     box-shadow: 0px 0px 10px 1px #666;
     text-align: center;
-    left: calc(50% - 350px);
+    left: -490px;
     overflow-x: auto;
     z-index: 5;
     -webkit-app-region: no-drag;
