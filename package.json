@@ -39,7 +39,7 @@
   },
   "build": {
     "appId": "cn.heisir.owtrtcclient",
-    "artifactName": "${productName}-${os}-${arch}-${version}.${ext}",
+    "artifactName": "${productName}-${os}-${arch}-v${version}.${ext}",
     "electronVersion": "11.2.0",
     "copyright": "Copyright © 2021 ${author}",
     "compression": "normal",
