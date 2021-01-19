@@ -38,8 +38,8 @@
     "ubuntu-latest": "npm run pack-linux"
   },
   "build": {
-    "appId": "cn.heisir.owtrtcclient",
-    "artifactName": "${productName}-${os}-${arch}-v${version}.${ext}",
+    "appId": "cn.heisir.owtclientrtc",
+    "artifactName": "OWTClient-${os}_${arch}-v${version}.${ext}",
     "electronVersion": "11.2.0",
     "copyright": "Copyright © 2021 ${author}",
     "compression": "normal",
@@ -94,7 +94,7 @@
     },
     "mac": {
       "hardenedRuntime": true,
-      "appId": "cn.heisir.owtrtcclient-mac",
+      "appId": "cn.heisir.owtclientrtc-mac",
       "category": "public.app-category.productivity",
       "target": [
         "dmg"
