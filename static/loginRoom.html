@@ -47,6 +47,14 @@
             ipcRenderer.send("close-win");
         };
 
+        ipcRenderer.send('getUser');
+        ipcRenderer.on('getUserRsp',(e,data)=>{
+            nickTxt.value = data;
+        });
+
+        nickTxt.onkeydown = (e)=>{
+            e.keyCode == '\n' && joinBtn.click();
+        }
     </script>
 </body>
 </html>

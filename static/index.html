@@ -24,40 +24,46 @@
         <video class="playRTC" autoplay width="100%" height="100%">
             this browser does not supported video tag
         </video>
+        <div class="drag"></div>
         <div class="tools">
             <div class="layout">
                 <img class="label" src="icon/layout.png" />
-                <select>
-                    <option>布局一</option>
-                    <option>布局二</option>
-                    <option>布局三</option>
-                </select>
+                <div class="title">布局</div>
             </div>
-            <div class="line"></div>
+            <div class="speak">
+                <img class="label" src="icon/speak_no.png" />
+                <div class="title">静音</div>
+            </div>
             <div class="audio">
                 <img class="label" src="icon/mic_no.png" />
+                <div class="title">静音</div>
+                <div class="tip"></div>
             </div>
-            <div class="line"></div>
             <div class="video">
                 <img class="label" src="icon/camera_no.png" />
+                <div class="title">启用</div>
+                <div class="tip"></div>
             </div>
-            <div class="line"></div>
+            <div class="video2">
+                <img class="label" src="icon/camera.png"/>
+                <div class="title">启用</div>
+                <div class="tip"></div>
+            </div>
             <div class="desktop">
                 <img class="label" src="icon/desktop-share.png" />
+                <div class="title">分享</div>
+                <div class="screen-dialog"></div>
             </div>
-            <div class="line"></div>
             <div class="record">
                 <img class="label" src="icon/record.png" />
+                <div class="title">录制</div>
             </div>
-            <div class="line"></div>
             <div class="exit">
                 <img class="label" src="icon/exit.png" />
+                <div class="title">退出</div>
             </div>
         </div>
-        <div class="screen-dialog"></div>
     </div>
-
-    
 
     <script src="scripts/jquery-3.2.1.min.js"></script>
     <script src="scripts/socket.io.js" type="text/javascript"></script>

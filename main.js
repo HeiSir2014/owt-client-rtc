@@ -8,6 +8,7 @@ let mainWindow = null;
 let screenWindow = null;
 let loginRoomWindow = null;
 let logger;
+let localConfig;
 
 
 (function(){
@@ -39,7 +40,7 @@ let logger;
     });
 
     app.on('ready', async () => {
-
+        localConfig = path.join(app.getPath('userData'),'config.json');
         logger = winston.createLogger({
             level: 'debug',
             format: winston.format.combine(
@@ -55,7 +56,7 @@ let logger;
             ],
         });
 
-        logger.info('loadExtension success');
+        logger.info('load success');
 
         let param = getStartParam();
         if(param.userId == 'any')
@@ -151,8 +152,20 @@ function ipcMessageFun(e,channel,data){
     }
     if (channel === 'close-win') {
         win.close();
+        return;
     }
-    else if(channel === 'show-screen' || (isDev && channel == 'show-screen-publish')){
+
+    if (channel === 'getUser') {
+        if(fs.existsSync(localConfig))
+        {
+            let con = JSON.parse(fs.readFileSync(localConfig,{encoding:'utf-8',flag:'r'}));
+            
+            'userId' in con && win.webContents.send('getUserRsp',con['userId']);
+        }
+        return;
+    }
+
+    if(channel === 'show-screen' || (isDev && channel == 'show-screen-publish')){
         screenWindow && (screenWindow.close());
         screenWindow = null;
         screenWindow = CreateDefaultWin();
@@ -162,17 +175,21 @@ function ipcMessageFun(e,channel,data){
         screenWindow.on('closed',()=>{
             screenWindow = null;
         });
+        return;
     }
-    else if(channel === 'joinRoom'){
+
+    if(channel === 'joinRoom'){
         let param = getStartParam();
-        if(data)
-        {
-            for (const key in data) {
-                if (Object.hasOwnProperty.call(data, key)) {
-                    param[key] = data[key];
-                }
-            }
+        for (const key in data) {
+            Object.hasOwnProperty.call(data, key) && (param[key] = data[key])
         }
+
+        let con = fs.existsSync(localConfig)? 
+            JSON.parse(fs.readFileSync(localConfig,{encoding:'utf8',flag:'r'})):{};
+        con['userId'] != data['userId'] &&
+        (con['userId'] = data['userId']) &&
+        (fs.writeFileSync(localConfig,JSON.stringify(con),{encoding:'utf-8'}));
+
         mainWindow = CreateDefaultWin();
         mainWindow.loadFile( path.join(__dirname, 'static/index.html'),{ query:param });
         mainWindow.on('closed', () => {
@@ -185,5 +202,6 @@ function ipcMessageFun(e,channel,data){
         });
         
         loginRoomWindow && (loginRoomWindow.close());
+        return;
     }
 }

@@ -30,6 +30,7 @@
 const { ipcRenderer, desktopCapturer } = require('electron');
 var conference;
 var publicationGlobal;
+var publicationGlobal2;
 var publicationScreenGlobal;
 var subscirptionGlobal;
 var mixStreamGlobal;
@@ -39,6 +40,7 @@ var bytesReceivedGlobal = 0;
 const runSocketIOSample = function () {
 
     let localStream;
+    let localStream2;
     let ScreenStream;
     let myId;
     let myRoom;
@@ -55,8 +57,7 @@ const runSocketIOSample = function () {
 
     
     function subscribeAndRenderVideo(stream) {
-        let subscirptionLocal = null;
-        let $video = document.querySelector('.video-container .playRTC');
+        let video = document.querySelector('.video-container .playRTC');
         const videoOptions = {};
         videoOptions.codecs = [{ name: "h264", profile: "CB" }];
         videoOptions.resolutions = [stream.settings.video[0].resolution];
@@ -66,17 +67,18 @@ const runSocketIOSample = function () {
             video: videoOptions
         }).then((subscription) => {
             mixStreamGlobal = stream;
-            subscirptionLocal = subscription;
-            subscirptionGlobal = subscirptionLocal;
-            $video.srcObject = stream.mediaStream;
+            subscirptionGlobal = subscription;
+            video.srcObject = stream.mediaStream;
+
+            speakButton && (speakButton.querySelector('img').src = !video.muted ? 'icon/speak_no.png':'icon/speak.png') &&
+             (speakButton.querySelector('.title').innerHTML = !video.muted ? '静音':"取消静音");
         }, (err) => {
             mixStreamGlobal = null;
-            subscirptionLocal = null;
             subscirptionGlobal = null;
             console.log('subscribe failed', err);
         });
         stream.addEventListener('ended', () => {
-            $video.srcObject = null;
+            video.srcObject = null;
             mixStreamGlobal = null;
         });
         stream.addEventListener('updated', () => {
@@ -86,46 +88,129 @@ const runSocketIOSample = function () {
 
     
 
+    function publishVideo2(Is720P) {
+        let videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
+        videoConstraints.deviceId = (video2Button ? video2Button.getAttribute('deviceId'):'');
+        if (Is720P) {
+            videoConstraints.resolution = { width: 1280, height: 720 };
+        }
+        let mediaStream;
+        Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
+            false, videoConstraints)).then(async stream => {
+                let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 2500 }] };
+                mediaStream = stream;
+                
+                let vT = mediaStream.getVideoTracks();
+                let videoTrack,audioTrack;
+                vT && vT.length && (videoTrack =vT[0] ) && 
+                (document.querySelector('.tools .video2 .title').innerHTML = '禁用');
+                (document.querySelector('.tools .video2 .label').src = 'icon/camera_no.png');
+                
+                localStream2 = new Owt.Base.LocalStream(
+                    mediaStream, new Owt.Base.StreamSourceInfo(
+                        'mic', 'camera'));
+                conference.publish(localStream2, publishOption).then(publication => {
+                    publicationGlobal2 = publication;
+                    mixStream(myRoom, publication.id, ['common', 'presenters'])
+                    publication.addEventListener('error', (err) => {
+                        localStream2 && localStream2.mediaStream && destroyMediaStream(localStream2.mediaStream),(localStream2 = null);
+                        console.log('Publication error: ' + err.error.message);
+
+                        (document.querySelector('.tools .video2 .title').innerHTML = '启用')
+                        (document.querySelector('.tools .video2 .label').src = 'icon/camera.png')
+                    });
+                });
+            }, err => {
+                publicationGlobal2 = null;
+                localStream2 && localStream2.mediaStream && destroyMediaStream(localStream2.mediaStream),(localStream2 = null);
+                
+                console.error('Failed to create MediaStream, ' + err);
+                if (Is720P) {
+                    publishVideo2(false);
+                    return 
+                }
+            });
+    }
+
     function publishVideo(Is720P,MicOK) {
         // audioConstraintsForMic
-        let audioConstraints = MicOK?new Owt.Base.AudioTrackConstraints(Owt.Base.AudioSourceInfo.MIC):false;
+        let audioConstraints = MicOK ? new Owt.Base.AudioTrackConstraints(Owt.Base.AudioSourceInfo.MIC):false;
         let videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
         if (Is720P) {
             videoConstraints.resolution = { width: 1280, height: 720 };
         }
         let mediaStream;
         Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
-            audioConstraints, videoConstraints)).then(stream => {
+            audioConstraints, videoConstraints)).then(async stream => {
                 let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 2500 }] };
                 mediaStream = stream;
+                
+                let vT = mediaStream.getVideoTracks();
+                let aT = mediaStream.getAudioTracks();
+                let videoTrack,audioTrack;
+                vT && vT.length && (videoTrack =vT[0] ) && 
+                (document.querySelector('.tools .video .tip').innerHTML = videoTrack.label.replace(/ ?\([\w:]{9}\)/,'')) &&
+                (document.querySelector('.tools .video .title').innerHTML = '禁用');
+                (document.querySelector('.tools .video .label').src = 'icon/camera_no.png');
+                aT && aT.length && (audioTrack = aT[0]) &&
+                 (document.querySelector('.tools .audio .tip').innerHTML = audioTrack.label.replace(/ ?\([\w:]{9}\)/,'')) &&
+                 (document.querySelector('.tools .audio .title').innerHTML = '静音') &&
+                 (document.querySelector('.tools .audio .label').src = 'icon/mic_no.png');
+
+                let devices = await navigator.mediaDevices.enumerateDevices();
+                let videoInputDevices = devices.filter(d => d.kind && d.kind == 'videoinput');
+                if(videoInputDevices.length >= 2 && videoTrack)
+                {
+                    videoInputDevices = videoInputDevices.filter(d => d.label != videoTrack.label);
+                    videoInputDevices && videoInputDevices.length && (document.querySelector('.tools .video2 .tip').innerHTML = videoInputDevices[0].label.replace(/ ?\([\w:]{9}\)/,''))
+                    && (document.querySelector('.tools .video2').setAttribute('deviceId',videoInputDevices[0].deviceId)) &&
+                    (document.querySelector('.tools .video2 .title').innerHTML = '启用')&&
+                    (document.querySelector('.tools .video2 .label').src = 'icon/camera.png');
+                    
+                }
+                
                 localStream = new Owt.Base.LocalStream(
                     mediaStream, new Owt.Base.StreamSourceInfo(
                         'mic', 'camera'));
                 conference.publish(localStream, publishOption).then(publication => {
                     publicationGlobal = publication;
                     mixStream(myRoom, publication.id, ['common', 'presenters'])
-                    publication.addEventListener('error', (err) => {
+                    let clearLocalCamera = (err)=>{
                         localStream && localStream.mediaStream && destroyMediaStream(localStream.mediaStream),(localStream = null);
                         console.log('Publication error: ' + err.error.message);
-                    });
+
+                        (document.querySelector('.tools .video .title').innerHTML = '启用')
+                        (document.querySelector('.tools .video .label').src = 'icon/camera.png')
+                        (document.querySelector('.tools .audio .title').innerHTML = '启用')
+                        (document.querySelector('.tools .video .label').src = 'icon/mic.png')
+                    };
+                    
+                    publication.addEventListener('error',clearLocalCamera);
+                    publication.addEventListener('end',clearLocalCamera);
                 });
             }, err => {
                 publicationGlobal = null;
                 localStream && localStream.mediaStream && destroyMediaStream(localStream.mediaStream),(localStream = null);
                 
-                console.error('Failed to create MediaStream, ' +
-                    err);
+                console.error('Failed to create MediaStream, ' + err);
                 if (Is720P && MicOK) {
                     publishVideo(false,true);
+                    return 
                 }
-                else if(Is720P == false && MicOK){
+                if(Is720P == false && MicOK){
                     publishVideo(true,false);
+                    return 
                 }
-                else if(Is720P && MicOK == false){
+                if(Is720P && MicOK == false){
                     publishVideo(false,false);
+                    return 
                 }
             });
     }
+
+
+
+
 
     function destroyMediaStream(mediaStream)
     {
@@ -141,16 +226,18 @@ const runSocketIOSample = function () {
         }
     }
 
-    window.onload = function () {
+    window.onload = async function () {
         myRoom = getParameterByName('room');
         myUserId = getParameterByName('userId');
         myUserNick = getParameterByName('userNick');
-        createToken(myRoom, myUserId, 'presenter', function (response) {
+
+        createToken(myRoom, myUserId, 'presenter',function (response) {
             var token = response;
             conference = new Owt.Conference.ConferenceClient();
-            conference.join(token).then(resp => {
+            conference.join(token).then(resp =>  {
                 myId = resp.self.id;
                 myRoom = resp.id;
+
                 publishVideo(true,true);
                 var streams = resp.remoteStreams;
                 for (const stream of streams) {
@@ -221,21 +308,26 @@ const runSocketIOSample = function () {
             }
 
             subscirptionGlobal && (stats = await subscirptionGlobal.getStats());
-            stats && stats.forEach(statForEach);
+            stats && stats.forEach(statForEach) && (stats = null);
             publicationGlobal && (stats = await publicationGlobal.getStats());
-            stats && stats.forEach(statForEach);
+            stats && stats.forEach(statForEach) && (stats = null);
+            publicationGlobal2 && (stats = await publicationGlobal2.getStats());
+            stats && stats.forEach(statForEach) && (stats = null);
             publicationScreenGlobal && (stats = await publicationScreenGlobal.getStats());
-            stats && stats.forEach(statForEach);
+            stats && stats.forEach(statForEach) && (stats = null);
 
             calcNetwork(bytesSent, bytesReceived);
         }, 1000);
 
         let close = document.querySelector('.systools .close');
         let exit = document.querySelector('.tools .exit');
-        let desktopShare = document.querySelector('.tools .desktop');
-        let changeLayout = document.querySelector('.tools .layout');
-        let audioButton = document.querySelector('.tools .audio');
-        let videoButton = document.querySelector('.tools .video');
+        window.desktopShare = document.querySelector('.tools .desktop');
+        window.changeLayout = document.querySelector('.tools .layout');
+        window.audioButton = document.querySelector('.tools .audio');
+        window.videoButton = document.querySelector('.tools .video');
+        window.video2Button = document.querySelector('.tools .video2');
+        window.speakButton = document.querySelector('.tools .speak');
+        
         exit.onclick = close.onclick = () => {
             try {
                 conference && (conference.leave());
@@ -252,10 +344,9 @@ const runSocketIOSample = function () {
 
         window.startShareScreen = async function startShareScreen(screenId) {
             let screenDlg = document.querySelector('.screen-dialog');
-            if (screenDlg.style.display == 'block') {
-                screenDlg.style.display = 'none';
-                screenDlg.innerHTML = '';
-            }
+            
+            screenDlg && (screenDlg.style.display = 'none') && (screenDlg.innerHTML = '');
+
             let mediaStream;
             mediaStream = await navigator.mediaDevices.getUserMedia({
                 audio: false,
@@ -263,9 +354,7 @@ const runSocketIOSample = function () {
                     mandatory: {
                         chromeMediaSource: 'screen',
                         chromeMediaSourceId: screenId,
-                        minWidth: 1280,
                         maxWidth: 1920,
-                        minHeight: 720,
                         maxHeight: 1920
                     }
                 }
@@ -276,15 +365,19 @@ const runSocketIOSample = function () {
                 publicationScreenGlobal = publication;
                 
                 desktopShare.querySelector('img').src = 'icon/desktop-share_no.png';
+                desktopShare.querySelector('.title').innerHTML = "关闭";
+
                 mixStream(myRoom, publication.id, ['common']);
-                publication.addEventListener('error', (err) => {
-                    
+
+                let clearScreenShare = (err)=>{
                     ScreenStream && ScreenStream.mediaStream && (destroyMediaStream(ScreenStream.mediaStream)),(ScreenStream = null);
                     
-                    console.log('Publication error: ' + err.error.message);
-
                     desktopShare.querySelector('img').src = 'icon/desktop-share.png';
-                });
+                    desktopShare.querySelector('.title').innerHTML = "分享";
+                }
+                publication.addEventListener('error', clearScreenShare);
+                publication.addEventListener('end',clearScreenShare);
+
 
                 //ipcRenderer.send('show-screen', publication.id);
                 ipcRenderer.send('show-screen-publish', `${location.search}&streamId=${publication.id}`);
@@ -297,13 +390,15 @@ const runSocketIOSample = function () {
         }
 
 
-        desktopShare.onclick = () => {
-
+        desktopShare.onclick = (e) => {
+            if(e.target.className =='screen-poster') return;
+            console.log('desktopShare.onclick' + e.target)
             if (publicationScreenGlobal) {
                 ScreenStream && ScreenStream.mediaStream && (destroyMediaStream(ScreenStream.mediaStream)),(ScreenStream = null);
                 publicationScreenGlobal.stop();
                 publicationScreenGlobal = null;
                 desktopShare.querySelector('img').src = 'icon/desktop-share.png';
+                desktopShare.querySelector('.title').innerHTML = "分享";
                 ipcRenderer.send('show-screen-close');
                 return;
             }
@@ -359,16 +454,59 @@ const runSocketIOSample = function () {
             publicationGlobal && localStream && localStream.mediaStream && (track = localStream.mediaStream.getAudioTracks()[0]);
             track && (track.enabled = !track.enabled) && (enabled = track.enabled);
             audioButton.querySelector('img').src = enabled ? 'icon/mic_no.png':'icon/mic.png';
+            audioButton.querySelector('.title').innerHTML = enabled ? '静音':"取消静音";
         }
 
         videoButton.onclick = (e)=>{
             let track;
             let enabled = false;
-            publicationGlobal  && localStream && localStream.mediaStream && (track = localStream.mediaStream.getVideoTracks()[0]);
-            track && (track.enabled = !track.enabled) && (enabled = track.enabled);
-            videoButton.querySelector('img').src = enabled ? 'icon/camera_no.png':'icon/camera.png';
+            if(publicationGlobal)
+            {
+                localStream && localStream.mediaStream && (track = localStream.mediaStream.getVideoTracks()[0]);
+                track && (track.enabled = !track.enabled) && (enabled = track.enabled);
+                videoButton.querySelector('img').src = enabled ? 'icon/camera_no.png':'icon/camera.png';
+                videoButton.querySelector('.title').innerHTML = enabled ? '禁用':"启用";
+                
+                return;
+            }
+            publishVideo(true);
         }
 
+        video2Button.onclick = (e)=>{
+            let track;
+            let enabled = false;
+            if(publicationGlobal2)
+            {
+                publicationGlobal2.stop();
+                publicationGlobal2 = null;
+                localStream2 && localStream2.mediaStream && destroyMediaStream(localStream2.mediaStream),(localStream2 = null);
+                localStream2 && localStream2.mediaStream && (track = localStream2.mediaStream.getVideoTracks()[0]);
+                track && (track.enabled = !track.enabled) && (enabled = track.enabled);
+                video2Button.querySelector('img').src = enabled ? 'icon/camera_no.png':'icon/camera.png';
+                video2Button.querySelector('.title').innerHTML = enabled ? '禁用':"启用";
+                return;
+            }
+            
+            publishVideo2(true);
+        }
+
+        speakButton.onclick = (e)=>{
+            let video = document.querySelector('.video-container .playRTC');
+            video && (video.muted = !video.muted);
+            speakButton.querySelector('img').src = !video.muted ? 'icon/speak_no.png':'icon/speak.png';
+            speakButton.querySelector('.title').innerHTML = !video.muted ? '静音':"取消静音";
+        }
+
+
+        let devices = await navigator.mediaDevices.enumerateDevices()
+        let audioInputDevices = devices.filter(d => d.kind && d.kind == 'audioinput');
+        let videoDevices = devices.filter(d => d.kind && d.kind == 'videoinput');
+        
+        audioInputDevices && audioInputDevices.length == 0 &&
+         (audioButton.querySelector('img').src = 'icon/mic.png');
+
+        console.log(videoDevices);
+        videoDevices && videoDevices.length >= 2 && (document.querySelector('.tools .video2').style.display = 'inline-block');
     };
 };
 window.onbeforeunload = function (event) {

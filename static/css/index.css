@@ -28,28 +28,28 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 
 @keyframes toolsAnimation{
-    from {filter: opacity(0.5);}
+    from {filter: opacity(0);}
     to {filter: opacity(1);}
 }
 
 .video-container .tools{
     position: relative;
     width: fit-content;
-    height: 60px;
+    height: 72px;
     bottom: 15%;
     margin: 0 auto;
     background: #404040;
     border-radius: 5px;
     box-shadow: 0px 0px 6px 1px #444;
-    overflow: hidden;
-    padding: 0 10px;
-    filter: opacity(0.5);
+    overflow: visible;
+    padding: 0;
+    opacity:0;
     -webkit-app-region: no-drag;
 }
 
 .video-container .tools:hover{
-    animation: toolsAnimation 1s;
-    filter: opacity(1);
+    animation: toolsAnimation 1.5s;
+    opacity:1;
 }
 
 .video-container .tools:hover >*{
@@ -57,7 +57,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 
 .video-container .tools > *{
-    width: 60px;
+    width: 90px;
     line-height: 1.0;
     height: 100%;
     border: none;
@@ -66,12 +66,25 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     color: white;
     box-sizing: content-box;
     display: inline-block;
-    vertical-align: middle;
-    filter:blur(0px);
+    vertical-align: middle;    
+    border-right: solid 1px #a0a0a040;
+    border-left: solid 1px transparent;
+    position: relative;
+    font-size: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.video-container .tools > *:not(:first-child){
+    margin-left: -4px;
 }
 
 .video-container .tools > *:hover{
-    transform: scale(1.2);
+    background-color:#00000033;
+}
+
+.video-container .tools >:last-child{
+    border-right: 0;
 }
 
 .video-container .tools option{
@@ -86,17 +99,56 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 .video-container .tools .label{
     width: 32px;
-    height: 100%;
+    height: 80%;
     line-height: 1.0;
     object-fit: contain;
 }
+.video-container .tools .tip{
+    display: none;
+}
 
+.video-container .tools > *:hover .tip{
+    display: block;
+    position: absolute;
+    top: -40px;
+    min-width: 150px;
+    width: fit-content;
+    height: fit-content;
+    font-size: 14px;
+    white-space: nowrap;
+    text-align: center;
+    padding: 10px;
+    background-color: brown;
+    border-radius: 5px;
+    left: -30px;
+}
 
-.video-container .tools .line{
-    border-right: solid 1px #a0a0a040;
-    width: 0px;
-    height: 100%;
-    line-height: 1.0;
+.video-container .tools .video2,.video-container .tools .record{
+    display: none;
+}
+
+.video-container .tools .title{
+    position: absolute;
+    bottom: 8px;
+    width: 100%;
+    font-size: 12px;
+    white-space: nowrap;
+    text-align: center;
+    overflow: hidden;
+    padding: 0 1px;
+}
+
+.video-container .drag{
+    position: absolute;
+    width: 80%;
+    height: 80%;
+    left: 10%;
+    top:10%;
+    font-size: 0;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    -webkit-app-region: drag;
 }
 
 .heisir{
@@ -109,7 +161,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     position: relative;
     overflow: hidden;
     
-    -webkit-app-region: drag;
+    -webkit-app-region: no-drag;
 }
 
 .heisir .header{
@@ -117,6 +169,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     height: 32px;
     position: absolute;
     z-index: 2;
+    -webkit-app-region: drag;
 }
 
 .heisir .header .network{
@@ -203,12 +256,12 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     -webkit-app-region: no-drag;
 }
 
-.heisir .screen-dialog{
+.heisir .desktop .screen-dialog{
     display: none;
-    position: absolute;
+    position: fixed;
     width: 700px;
     background-color: #d8d8d8ab;
-    bottom: calc(15% + 10px);
+    bottom: 72px;
     margin: 0 auto;
     border-radius: 4px;
     padding: 10px;
@@ -218,15 +271,20 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     overflow-x: auto;
     z-index: 5;
     -webkit-app-region: no-drag;
+    opacity: 0;
 }
 
 
-.heisir .screen-dialog .screen-poster{
+.heisir .desktop .screen-dialog .screen-poster{
     width: 200px;
     margin: 10px;
     box-shadow: 0px 0px 10px 1px #333;
 }
 
-.heisir .screen-dialog .screen-poster:hover{
+.heisir .desktop:hover .screen-dialog{
+    opacity: 1;
+}
+
+.heisir .desktop .screen-dialog .screen-poster:hover{
     transform: scale(1.1);
 }
