@@ -154,10 +154,10 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 .heisir{
     padding: 0;
     margin: 0;
-    background-image: url(../imgs/background-04.png);
+    background-color: #1E1E1E;
     background-size: cover;
     background-position: center;
-    box-shadow: inset 0px 0px 25px 0px #fff;
+    box-shadow: inset 0px 0px 2px 1px #444;
     position: relative;
     overflow: hidden;
     
@@ -287,4 +287,61 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 
 .heisir .desktop .screen-dialog .screen-poster:hover{
     transform: scale(1.1);
+}
+
+#App{
+    width: 100%;
+    height: 100%;
+}
+
+
+.el-header {
+    -webkit-app-region: drag;
+    padding:0 !important;
+    background-color:#009afb;
+    line-height: 40px;
+}
+
+.el-header .title{
+    margin-left: 10px;
+    font-weight: 600;
+    font-size: 16px;
+    color: #f3f3f3;
+    margin-top: -6px;
+}
+
+.systemTool{
+    position: fixed;
+    right: 0;
+    top: 0;
+    margin-top: -6px;
+    margin-right: 0px;
+    -webkit-app-region: no-drag;
+}
+
+
+.systemTool .mylink{
+    color: #f3f3f3;
+    margin: 0 5px;
+    text-decoration: none;
+    font-size: 14px;
+}
+.systemTool .el-button{
+    padding:0 !important;
+    border:0 !important;
+    border-radius:0 !important;
+    color: #f3f3f3 !important;
+}
+.systemTool .el-button:hover{
+    background-color: #D71526;
+}
+.systemTool .button{
+    width: 30px;
+    height: 30px;
+    background-color: #00000000;
+    font-size: large;
+}
+
+.systemTool .el-button+.el-button{
+    margin-left: 0 !important;
 }

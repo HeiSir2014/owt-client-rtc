@@ -52,8 +52,9 @@
             nickTxt.value = data;
         });
 
-        nickTxt.onkeydown = (e)=>{
-            e.keyCode == '\n' && joinBtn.click();
+        roomTxt.onkeydown = nickTxt.onkeydown = (e)=>{
+            e.keyCode == 13 && (joinBtn.click());
+            return e.keyCode != 13;
         }
     </script>
 </body>

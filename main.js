@@ -108,8 +108,8 @@ function getStartParam()
 function CreateDefaultWin(options)
 {
     let opt = {
-        width: 1280,
-        height: 720,
+        width: 960,
+        height: 540,
         backgroundColor: '#ff2e2c29',
         skipTaskbar: false,
         transparent: false, frame: false, resizable: true,
