@@ -35,7 +35,7 @@ const _app = new Vue({
                     that.myId = resp.self.id;
                     that.myRoomId = resp.id;
                     
-                    (that.enableAudio || that.enableAudio) && that.publishVideo(true,true);
+                    (that.enableAudio || that.enableAudio) && that.publishVideo();
 
                     var streams = resp.remoteStreams;
                     for (const stream of streams) {
@@ -68,6 +68,7 @@ const _app = new Vue({
             });
         },
         close:function(e){
+            this.exitRoom();
             ipcRenderer.send("close-win");
         },
         minimize:function(e){
@@ -98,9 +99,10 @@ const _app = new Vue({
             stream.addEventListener('ended', () => {
                 that.playerStream = null;
                 that.mixStreamGlobal = null;
+                console.log(`${stream.id} is ended`);
             });
             stream.addEventListener('updated', () => {
-
+                console.log(`${stream.id} is updated`);
             });
         },
         streamadded:function(event){
@@ -121,7 +123,7 @@ const _app = new Vue({
             const that = this;
             let videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
             let audioConstraints = [new Owt.Base.AudioTrackConstraints(Owt.Base.AudioSourceInfo.MIC),false];
-            let resolutions = [{ width: 3840, height: 1080 },{ width: 640, height: 360 },undefined];
+            let resolutions = [{ width: 1920, height: 1080 },{ width: 1280, height: 720 },{ width: 640, height: 360 },undefined];
             let mediaStream;
             for (const audioConstraint of audioConstraints) {
                 for (const resolution of resolutions) {
@@ -164,6 +166,9 @@ const _app = new Vue({
                 
             }
 
+            audioTrack && (audioTrack.enabled = that.enableAudio);
+            videoTrack && (videoTrack.enabled = that.enableVideo);
+
             that.localStream = new Owt.Base.LocalStream(
                 mediaStream, new Owt.Base.StreamSourceInfo(
                     'mic', 'camera'));
@@ -172,12 +177,12 @@ const _app = new Vue({
             } catch (error) {
                 that.publicationGlobal = null;
                 console.error(error);
-                that.localStream && that.localStream.mediaStream && destroyMediaStream(that.localStream.mediaStream),(that.localStream = null);
+                that.localStream && that.localStream.mediaStream && that.destroyMediaStream(that.localStream.mediaStream),(that.localStream = null);
             }
             if(!that.publicationGlobal) return;
             mixStream(that.myRoomId, that.publicationGlobal.id, ['common', 'presenters'])
             let clearLocalCamera = (err)=>{
-                that.localStream && that.localStream.mediaStream && destroyMediaStream(that.localStream.mediaStream),(that.localStream = null);
+                that.localStream && that.localStream.mediaStream && that.destroyMediaStream(that.localStream.mediaStream),(that.localStream = null);
                 console.log('Publication error: ' + err.error.message);
 
                 (document.querySelector('.tools .video .title').innerHTML = '启用')
@@ -238,10 +243,25 @@ const _app = new Vue({
         },
         exitRoom:function(e){
             const that = this;
-            that.conference && that.conference.leave(),that.conference = null;
             that.publicationGlobal && that.publicationGlobal.stop(),that.publicationGlobal = null;
             that.subscirptionGlobal && that.subscirptionGlobal.stop(),that.subscirptionGlobal = null;
             that.publicationScreenGlobal && that.publicationScreenGlobal.stop(),that.publicationScreenGlobal = null;
+            that.mixStreamGlobal && that.mixStreamGlobal.mediaStream && that.destroyMediaStream(that.mixStreamGlobal.mediaStream),(that.mixStreamGlobal = null);
+            that.conference && that.conference.leave(),that.conference = null;
+            that.playerStream = null;
+        },
+        destroyMediaStream:function(mediaStream)
+        {
+            try {
+                let audioTracks,videoTracks;
+                mediaStream && (audioTracks = mediaStream.getAudioTracks()),
+                mediaStream && (videoTracks = mediaStream.getVideoTracks()),
+                audioTracks && (audioTracks.forEach(t=>{ t.stop(); mediaStream.removeTrack(t);})),
+                videoTracks && (videoTracks.forEach(t=>{ t.stop(); mediaStream.removeTrack(t);})),
+                (mediaStream = null);
+            } catch (err) {
+                console.error(err);
+            }
         }
     },
     mounted:function(){
