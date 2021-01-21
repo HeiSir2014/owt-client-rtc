@@ -32,17 +32,19 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 
 .video-container .tools{
-    position: relative;
+    position: absolute;
     width: fit-content;
-    height: 72px;
-    bottom: 15%;
+    height: 62px;
+    bottom: 50px;
+    left: 0;
+    right: 0;
     margin: 0 auto;
     background: #404040;
     border-radius: 5px;
     box-shadow: 0px 0px 6px 1px #444;
     overflow: visible;
     padding: 0;
-    opacity:0;
+    opacity: 1;
     -webkit-app-region: no-drag;
 }
 
@@ -56,7 +58,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 
 .video-container .tools > *{
-    width: 90px;
+    width: 72px;
     line-height: 1.0;
     height: 100%;
     border: none;
@@ -97,8 +99,8 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     line-height: 1.0;
 }
 .video-container .tools .label{
-    width: 32px;
-    height: 80%;
+    width: 28px;
+    height: 72%;
     line-height: 1.0;
     object-fit: contain;
 }
@@ -135,6 +137,9 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     text-align: center;
     overflow: hidden;
     padding: 0 1px;
+    font-weight: 400;
+    letter-spacing: 2px;
+    text-indent:2px;
 }
 
 .video-container .drag{
@@ -175,8 +180,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 
 .heisir .toolbar{
     width: 100%;
-    height: 32px;
-    background-color1: #353535;
+    height: fit-content;
     position: absolute;
     top: 33px;
     z-index: 2;
@@ -184,20 +188,19 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 
 
 .heisir .network{
-    width: 230px;
+    width: fit-content;
     right: 0;
     position: absolute;
     text-align: left;
-    background-color: #000000bb;
-    height: 100%;
+    background-color: #00000044;
+    height: 24px;
     padding: 0 5px;
     box-sizing: content-box;
-    border-bottom-left-radius: 5px;
-    overflow: hidden;
+    border-bottom-left-radius: 4px;
 }
 .heisir .network *{
-    font-size: 12px;
-    line-height: 32px;
+    font-size: 10px;
+    line-height: 24px;
     font-style: normal;
     display: inline-block;
     background-size: contain;
@@ -209,10 +212,10 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     white-space: nowrap;
 }
 .heisir .network .upload,.heisir .network .download{
-    width: 100px;
+    width: fit-content;
 }
 .heisir .network .wireless{
-    width: 14px;
+    width: 12px;
     background-image: url(../icon/network.png);
     margin-right: 5px;
 }
@@ -231,13 +234,16 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 
 .heisir .header .title{
+    width: fit-content;
     height: 100%;
     line-height: 32px;
     color: #e5e5e5;
     vertical-align: middle;
     margin: 0 10px;
-    font-size: 15px;
-    width: fit-content;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-indent: 2px;
 }
 
 .heisir .systools >*{

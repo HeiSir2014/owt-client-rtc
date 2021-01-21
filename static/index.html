@@ -23,11 +23,11 @@
             <div class="network">
                 <div class="wireless"></div>
                 <div class="upload">上行：{{statUpload}} KB/s</div>
-                <div class="download">下行：{{statUpload}} KB/s</div>
+                <div class="download">下行：{{statDownload}} KB/s</div>
             </div>
         </div>
         <div class="video-container">
-            <video class="playRTC" modal="player" autoplay width="100%" height="100%">
+            <video class="playRTC" v-if="playerStream" :src-object.prop.camel="playerStream" :muted="IsSpeakMuted" autoplay width="100%" height="100%">
                 this browser does not supported video tag
             </video>
             <div class="tools">
@@ -39,7 +39,7 @@
                         <div>只看</div>
                         <div></div>
                     </div>
-                    <el-dropdown split-button type="primary" @click="handleClick">
+                    <!-- <el-dropdown split-button type="primary" @click="handleClick">
                         更多菜单
                         <el-dropdown-menu slot="dropdown">
                             <el-dropdown-item>黄金糕</el-dropdown-item>
@@ -48,39 +48,39 @@
                             <el-dropdown-item>双皮奶</el-dropdown-item>
                             <el-dropdown-item>蚵仔煎</el-dropdown-item>
                         </el-dropdown-menu>
-                    </el-dropdown>
+                    </el-dropdown> -->
                 </div>
-                <div class="speak">
-                    <img class="label" src="icon/speak_no.png" />
-                    <div class="title">静音</div>
+                <div class="speak" @click="clickSpeak">
+                    <img class="label" :src="IsSpeakMuted?'icon/speak.png':'icon/speak_no.png'" />
+                    <div class="title">{{IsSpeakMuted?'解除静音':'静音'}}</div>
                 </div>
-                <div class="audio">
+                <div class="audio" @click="clickMicphone">
                     <img class="label" src="icon/mic_no.png" />
                     <div class="title">静音</div>
                     <div class="tip"></div>
                 </div>
-                <div class="video">
+                <div class="video" @click="clickCamera">
                     <img class="label" src="icon/camera_no.png" />
                     <div class="title">启用</div>
                     <div class="tip"></div>
                 </div>
-                <div class="video2">
+                <div class="video2" @click="clickCamera2">
                     <img class="label" src="icon/camera.png" />
                     <div class="title">启用</div>
                     <div class="tip"></div>
                 </div>
-                <div class="desktop">
+                <div class="desktop" @click="clickDesktop">
                     <img class="label" src="icon/desktop-share.png" />
                     <div class="title">分享</div>
                     <div class="screen-dialog"></div>
                 </div>
-                <div class="record">
+                <div class="record" @click="clickRecord">
                     <img class="label" src="icon/record.png" />
                     <div class="title">录制</div>
                 </div>
-                <div class="exit">
+                <div class="exit" @click="close">
                     <img class="label" src="icon/exit.png" />
-                    <div class="title">退出</div>
+                    <div class="title">结束</div>
                 </div>
             </div>
         </div>
@@ -89,7 +89,6 @@
     <script src="scripts/socket.io.js" type="text/javascript"></script>
     <script src="scripts/adapter-7.0.0.js" type="text/javascript"></script>
     <script src="scripts/owt.js" type="text/javascript"></script>
-    <script src="scripts/index1.js" type="text/javascript"></script>
     <script src="scripts/rest-sample.js" type="text/javascript"></script>
 
     <script src="element-ui/vue.js" type="text/javascript"></script>
@@ -104,7 +103,6 @@
                 "" :
                 decodeURIComponent(results[1].replace(/\+/g, " "));
         }
-        //runSocketIOSample();
     </script>
 </body>
 

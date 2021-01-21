@@ -163,12 +163,17 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 
 .heisir .content .title{
-    margin: 40px auto;
     font-size: 28px;
-    font-weight: 900;
+    font-weight: 500;
     text-shadow: 1px 1px #888;
     text-align: center;
     color: #333;
+    letter-spacing: 8px;
+    text-indent: 8px;
+    padding: 40px 0px;
+    margin: 0 auto;
+    
+    -webkit-app-region: drag;
 }
 
 .heisir .content .msg{
