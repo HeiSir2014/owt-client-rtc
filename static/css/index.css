@@ -24,7 +24,6 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
   
 .video-container video{
     object-fit: cover;
-    box-shadow: inset 0px 0px 25px 0px #fff;
 }
 
 @keyframes toolsAnimation{
@@ -154,10 +153,9 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 .heisir{
     padding: 0;
     margin: 0;
-    background-color: #1E1E1E;
+    background-color: #252526;
     background-size: cover;
     background-position: center;
-    box-shadow: inset 0px 0px 2px 1px #444;
     position: relative;
     overflow: hidden;
     
@@ -168,13 +166,26 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     width: 100%;
     height: 32px;
     position: absolute;
+    background-color: #333333;
+    border-bottom: solid 1px #454545;
     z-index: 2;
     -webkit-app-region: drag;
+    box-sizing: content-box;
 }
 
-.heisir .header .network{
+.heisir .toolbar{
+    width: 100%;
+    height: 32px;
+    background-color1: #353535;
+    position: absolute;
+    top: 33px;
+    z-index: 2;
+}
+
+
+.heisir .network{
     width: 230px;
-    right: 32px;
+    right: 0;
     position: absolute;
     text-align: left;
     background-color: #000000bb;
@@ -184,7 +195,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     border-bottom-left-radius: 5px;
     overflow: hidden;
 }
-.heisir .header .network *{
+.heisir .network *{
     font-size: 12px;
     line-height: 32px;
     font-style: normal;
@@ -197,47 +208,69 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     vertical-align: middle;
     white-space: nowrap;
 }
-.heisir .header .network .upload,.heisir .header .network .download{
+.heisir .network .upload,.heisir .network .download{
     width: 100px;
 }
-.heisir .header .network .wireless{
+.heisir .network .wireless{
     width: 14px;
     background-image: url(../icon/network.png);
     margin-right: 5px;
 }
 
-.heisir .header .systools{
-    width: 32px;
+.heisir .header > *{
+    display: inline-block;
+}
+.heisir .systools{
+    width: fit-content;
     right: 0px;
     position: absolute;
-    text-align: left;
-    background-color: #000000bb;
     height: 100%;
     box-sizing: content-box;
     overflow: hidden;
-    border-left: solid 1px #a0a0a088;
     -webkit-app-region: no-drag;
 }
 
-.heisir .header .systools:hover{
-    background-color: rgb(177, 0, 0);
+.heisir .header .title{
+    height: 100%;
+    line-height: 32px;
+    color: #e5e5e5;
+    vertical-align: middle;
+    margin: 0 10px;
+    font-size: 15px;
+    width: fit-content;
+}
+
+.heisir .systools >*{
+    width: 32px;
+    height: 100%;
+    display: inline-block;
+}
+
+.heisir .systools .minimize{
+    background-image: url(../icon/minimize.png);
+    background-size: 14px 14px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.heisir .systools .minimize:hover{
+    background-color: #505050;
+    background-image: url(../icon/minimize_hover.png);
 }
 
 .heisir .header .systools .close{
     background-image: url(../icon/close.png);
-    height: 100%;
-    width: 14px;
-    background-size: contain;
+    background-size: 14px 14px;
     background-repeat: no-repeat;
-    vertical-align: middle;
-    margin: 0 auto;
     background-position: center;
 }
 
 .heisir .header .systools .close:hover{
+    background-color: #D71526;
     background-image: url(../icon/close-hover.png);
 }
 
+.heisir .header
 
 .heisir .bitrate-container{
     position: absolute;

@@ -23,6 +23,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     position: relative;
     overflow: hidden;
     background-color: #f0f8ff;
+    font-weight: 500;
     -webkit-app-region: drag;
 }
 
@@ -49,7 +50,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 
 .heisir .header .systools{
-    width: 32px;
+    width: fit-content;
     right: 0px;
     position: absolute;
     text-align: left;
@@ -66,8 +67,8 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 .heisir .header .systools .close{
     background-image: url(../icon/close.png);
     height: 100%;
-    width: 14px;
-    background-size: contain;
+    width: 32px;
+    background-size: 14px 14px;
     background-repeat: no-repeat;
     vertical-align: middle;
     margin: 0 auto;
@@ -99,7 +100,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 
 .heisir .content .line{
-    margin: 10px auto;
+    margin: 8px auto;
     width: 80%;
     display: block;
     height: fit-content;
@@ -115,6 +116,28 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 .heisir .content .line input{
     height: 32px;
     margin: 0 auto;
+}
+
+.heisir .content .line input[type=checkbox]{
+    height: 24px;
+    width: fit-content;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+.heisir .content .line input[type=checkbox]:not(:first-child){
+    margin-left:50px;
+}
+
+.heisir .content .line .checkLabel{
+    height: 24px;
+    vertical-align: middle;
+    margin:3px 0;
+    cursor: pointer;
+}
+
+.heisir .content .line .checkLabel:hover{
+    color:#005CC8;
 }
 
 .heisir .content .line input[type=text],.heisir .content .line input[type=number]{
@@ -142,8 +165,8 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 .heisir .content .title{
     margin: 40px auto;
     font-size: 28px;
-    font-weight: 600;
-    text-shadow: 2px 1px #888;
+    font-weight: 900;
+    text-shadow: 1px 1px #888;
     text-align: center;
     color: #333;
 }

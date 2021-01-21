@@ -61,7 +61,7 @@ let localConfig;
         let param = getStartParam();
         if(param.userId == 'any')
         {
-            loginRoomWindow = CreateDefaultWin({width:800,height:520});
+            loginRoomWindow = CreateDefaultWin({width:800,height:520,resizable:false});
             loginRoomWindow.loadFile( path.join(__dirname, 'static/loginRoom.html'));
             loginRoomWindow.on('closed', () => {
                 loginRoomWindow = null;
@@ -78,7 +78,7 @@ let localConfig;
             mainWindow.once('ready-to-show',()=>{
                 mainWindow.focus();
                 mainWindow.moveTop();
-                mainWindow.maximize();
+                //mainWindow.maximize();
             });
         }
     });
@@ -132,7 +132,7 @@ function CreateDefaultWin(options)
     }
     let win = new BrowserWindow(opt);
     win.setMenu(null);
-    isDev && win.openDevTools();
+    isDev && win.webContents.openDevTools();
     //win.openDevTools();
     win.webContents.on('ipc-message',ipcMessageFun);
     win.webContents.on('new-window', (event, url, frameName, disposition, options) => {
@@ -154,13 +154,17 @@ function ipcMessageFun(e,channel,data){
         win.close();
         return;
     }
+    if (channel === 'minimize-win') {
+        win.minimize();
+        return;
+    }
 
     if (channel === 'getUser') {
         if(fs.existsSync(localConfig))
         {
             let con = JSON.parse(fs.readFileSync(localConfig,{encoding:'utf-8',flag:'r'}));
             
-            'userId' in con && win.webContents.send('getUserRsp',con['userId']);
+            win.webContents.send('getUserRsp',con);
         }
         return;
     }
@@ -180,15 +184,15 @@ function ipcMessageFun(e,channel,data){
 
     if(channel === 'joinRoom'){
         let param = getStartParam();
-        for (const key in data) {
-            Object.hasOwnProperty.call(data, key) && (param[key] = data[key])
-        }
-
+        
         let con = fs.existsSync(localConfig)? 
             JSON.parse(fs.readFileSync(localConfig,{encoding:'utf8',flag:'r'})):{};
-        con['userId'] != data['userId'] &&
-        (con['userId'] = data['userId']) &&
-        (fs.writeFileSync(localConfig,JSON.stringify(con),{encoding:'utf-8'}));
+        let lastConfigStr = JSON.stringify(con);
+        let mapKeys = ['userId','enableAudio','enableVideo']
+        for (const key in data) {
+            Object.hasOwnProperty.call(data, key) && (param[key] = data[key],mapKeys.indexOf(key) != -1 && (con[key] = data[key]));
+        }
+        JSON.stringify(con) != lastConfigStr && (fs.writeFileSync(localConfig,JSON.stringify(con),{encoding:'utf-8'}));
 
         mainWindow = CreateDefaultWin();
         mainWindow.loadFile( path.join(__dirname, 'static/index.html'),{ query:param });
@@ -198,7 +202,7 @@ function ipcMessageFun(e,channel,data){
         mainWindow.once('ready-to-show',()=>{
             mainWindow.focus();
             mainWindow.moveTop();
-            mainWindow.maximize();
+            //mainWindow.maximize();
         });
         
         loginRoomWindow && (loginRoomWindow.close());

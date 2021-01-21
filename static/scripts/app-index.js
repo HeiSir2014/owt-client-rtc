@@ -1,4 +1,4 @@
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, desktopCapturer } = require('electron');
 
 const _app = new Vue({
     el: '#App',
@@ -11,11 +11,13 @@ const _app = new Vue({
     },
     methods:{
         init:function(e){
-
+            this.connec
         },
         close:function(e){
-            
             ipcRenderer.send("close-win");
+        },
+        minimize:function(e){
+            ipcRenderer.send("minimize-win");
         }
     },
     mounted:function(){
