@@ -26,10 +26,13 @@ const _app = new Vue({
             usedCamera:'',
             usedCamera2:'',
             usedCamera2DeviceId:'',
+            layoutIndex:0,
             msg_input_visible:false,
             msg_content:'',
             emoji_visible:false,
-            emoji_data:['emoji_5','emoji_6','emoji_7','emoji_4','emoji_0','emoji_1','emoji_2','emoji_3']
+            emoji_data:['emoji_5','emoji_6','emoji_7','emoji_4','emoji_0','emoji_1','emoji_2','emoji_3'],
+            screen_data:[],
+            screen_select_visible:false
         }
     },
     methods:{
@@ -105,7 +108,7 @@ const _app = new Vue({
             return e.keyCode != 27;
         },
         msg_input_keyup:function(e){
-            e.keyCode == 13 && (this._sendMsg('msg_text',this.msg_content),this.msg_content = '');
+            e.keyCode == 13 && this.msg_content && (this._sendMsg('msg_text',this.msg_content),this.msg_content = '');
             return e.keyCode != 13;
         },
         _sendMsg:function(type,content){
@@ -115,7 +118,7 @@ const _app = new Vue({
             this.showMessage(this.myUserId,msg);
         },
         sendEmojiMsg:function(e) {
-            this._sendMsg('msg_emoji',e.target.parentElement.getAttribute('data'));
+            this._sendMsg('msg_emoji', e.target.parentElement.getAttribute('data'));
             this.emoji_visible = false;
         },
         maximizeChanged:function( event , isMaximized ) {
@@ -128,7 +131,7 @@ const _app = new Vue({
                     iconClass: '',
                     customClass: 'message_tip',
                     duration: 3000,
-                    offset: (document.body.clientHeight / 2)
+                    offset: (document.body.clientHeight / 2) - 24
                 });
             }
         },
@@ -171,18 +174,13 @@ const _app = new Vue({
             });
         },
         participantjoined:function(e){
-            console.log('participantjoined',e)
+            if( /robot/.test(e.participant.userId) ) return;
+            console.log('participantjoined',e);
+
             var audio = new Audio('audio/some_one_join_room.wav'); // path to file
             audio.play();
             audio = null;
-            this.$notify({
-                customClass:'notify_join',
-                message: `成员 ${e.participant.userId} 加入频道`,
-                position: 'bottom-left',
-                duration: 4000,
-                showClose: false,
-                offset: 84
-            });
+            this.showMessage(null,{type:'msg_text',content:`成员 ${ e.participant.userId } 加入频道`});
         },
         messagereceived:function(e){
             
@@ -196,22 +194,29 @@ const _app = new Vue({
             
         },
         showMessage:function(userId, message){
+            const duration = 8000;
+            const offset = 94;
+            const spacing = 2;
             message.type == 'msg_text' && this.$notify({
                 customClass: 'notify_msg',
-                message: `${userId} : ${ message.content }`,
+                message: `${userId ? (userId + ":"):''}${ message.content }`,
                 position: 'bottom-left',
-                duration: 0,
+                duration: duration,
                 showClose: false,
-                offset: 84
+                offset: offset,
+                spacing: spacing,
+                insertHead: true
             });
             message.type == 'msg_emoji' && this.$notify({
                 customClass: 'notify_msg emoji',
-                message: `${userId} : <img src="imgs/emoji/${ message.content }.png" width="24" height="24" />`,
+                message: `${userId ? (userId + ":"):''} : <img src="imgs/emoji/${ message.content }.png" width="28" height="28" />`,
                 position: 'bottom-left',
-                duration: 0,
-                dangerouslyUseHTMLString:true,
+                duration: duration,
+                dangerouslyUseHTMLString: true,
                 showClose: false,
-                offset: 84
+                offset: offset,
+                spacing: spacing,
+                insertHead: true
             });
         },
         serverdisconnected:function(e){
@@ -236,7 +241,7 @@ const _app = new Vue({
             const that = this;
             let videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
             let audioConstraints = [new Owt.Base.AudioTrackConstraints(Owt.Base.AudioSourceInfo.MIC),false];
-            let resolutions = [{ width: 1920, height: 1080 },{ width: 1280, height: 720 },{ width: 640, height: 360 },undefined];
+            let resolutions = [{ width: 1280, height: 720 },{ width: 640, height: 360 },undefined];
             let mediaStream;
             for (const audioConstraint of audioConstraints) {
                 for (const resolution of resolutions) {
@@ -296,11 +301,92 @@ const _app = new Vue({
             that.publicationGlobal.addEventListener('error',that._clearLocalCamera.bind(that));
             that.publicationGlobal.addEventListener('end',  that._clearLocalCamera.bind(that));
         },
+        publishVideoSecond:async function(){
+            const that = this;
+            let videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
+            let resolutions = [{ width: 1920, height: 1080 },{ width: 1280, height: 720 },{ width: 640, height: 360 },undefined];
+            let mediaStream;
+            videoConstraints.deviceId = that.usedCamera2DeviceId;
+            for (const resolution of resolutions) {
+                try {
+                    videoConstraints.resolution = resolution;
+                    resolution == undefined && delete videoConstraints.resolution;
+                    
+                    mediaStream = await Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
+                        false, videoConstraints));
+                    break;
+                } catch (error) {
+                    mediaStream = null;
+                    console.error(error);
+                }
+            }
+            if(!mediaStream) return;
+
+            that.localStreamSecond = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('mic', 'camera'));
+            try {
+                that.publicationGlobalSecond = await that.conference.publish(that.localStreamSecond, { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 4000 }],audio:false });
+                that.isCamera2Muted = false;
+            } catch (error) {
+                that.publicationGlobalSecond = null;
+                console.error(error);
+                that._clearLocalCameraSecond();
+            }
+            if(!that.publicationGlobalSecond)
+                return;
+            mixStream(that.myRoomId, that.publicationGlobalSecond.id, ['common', 'presenters']);
+            that.publicationGlobalSecond.addEventListener('error',that._clearLocalCameraSecond.bind(that));
+            that.publicationGlobalSecond.addEventListener('end',  that._clearLocalCameraSecond.bind(that));
+        },
         _clearLocalCamera:function(){
             const that = this;
             that.localStream && that.localStream.mediaStream && that.destroyMediaStream(that.localStream.mediaStream),(that.localStream = null);
             
             that.isCameraMuted = that.isMicMuted = true;
+        },
+        _clearLocalCameraSecond:function(){
+            const that = this;
+            that.localStreamSecond && that.localStreamSecond.mediaStream && that.destroyMediaStream(that.localStreamSecond.mediaStream),(that.localStreamSecond = null);
+            
+            that.isCamera2Muted = true;
+        },
+        startShareScreen:async function(e) {
+            const that = this;
+            let mediaStream;
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                    mandatory: {
+                        chromeMediaSource: 'screen',
+                        chromeMediaSourceId: e.target.getAttribute('data'),
+                        maxWidth: 1920,
+                        maxHeight: 1920
+                    }
+                }
+            });
+            
+            that.screen_select_visible = false;
+
+            let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 8000 }] };
+            that.ScreenStream = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('screen-cast', 'screen-cast'));
+            that.conference.publish(that.ScreenStream, publishOption).then(publication => {
+                that.publicationScreenGlobal = publication;
+                
+                that.isDesktopShared = true;
+
+                mixStream(that.myRoomId, publication.id, ['common']);
+                publication.addEventListener('error', that._clearScreenShare.bind(that));
+                publication.addEventListener('end', that._clearScreenShare.bind(that));
+                ipcRenderer.send('show-screen-publish', `${location.search}&streamId=${publication.id}`);
+
+            }, err => {
+                that._clearScreenShare();
+            })
+        },
+        _clearScreenShare:function(){
+            const that = this;
+            that.ScreenStream && that.ScreenStream.mediaStream && (destroyMediaStream(that.ScreenStream.mediaStream)),(that.ScreenStream = null);
+            that.publicationScreenGlobal = null;
+            that.isDesktopShared = false;
         },
         _getStat:async function() {
             const that = this;
@@ -317,7 +403,7 @@ const _app = new Vue({
             stats && stats.forEach(statForEach) && (stats = null);
             that.publicationGlobal && (stats = await that.publicationGlobal.getStats());
             stats && stats.forEach(statForEach) && (stats = null);
-            that.publicationGlobal2 && (stats = await that.publicationGlobal2.getStats());
+            that.publicationGlobalSecond && (stats = await that.publicationGlobalSecond.getStats());
             stats && stats.forEach(statForEach) && (stats = null);
             that.publicationScreenGlobal && (stats = await that.publicationScreenGlobal.getStats());
             stats && stats.forEach(statForEach) && (stats = null);
@@ -330,6 +416,24 @@ const _app = new Vue({
             }
             that.bytesReceivedGlobal = bytesReceived;
             that.bytesSentGlobal = bytesSent;
+        },
+        clickChanageLayout:function(e){
+            if (!this.subscriptionGlobal) return;
+            const layouts = [
+                [{ "region": [{ "id": "1", "area": { "height": "1", "width": "1", "top": "0", "left": "0" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "1/4", "width": "1/4", "top": "3/4", "left": "3/4" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1279/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "539/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1279/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1439/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "269/1080", "width": "479/1920", "top": "0", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "268/1080", "width": "479/1920", "top": "271/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "268/1080", "width": "479/1920", "top": "541/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "1441/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "719/1080", "width": "1279/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "358/1080", "width": "639/1920", "top": "721/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "0" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "809/1080", "width": "1439/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "269/1080", "width": "479/1920", "top": "0", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "268/1080", "width": "479/1920", "top": "281/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "268/1080", "width": "479/1920", "top": "541/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "268/1080", "width": "479/1920", "top": "811/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "961/1920" }, "shape": "rectangle" }, { "id": "7", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "481/1920" }, "shape": "rectangle" }, { "id": "8", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "0" }, "shape": "rectangle" }] }],
+                [{ "region": [{ "id": "1", "area": { "height": "1", "width": "1", "top": "0", "left": "0" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "959/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "1", "width": "959/1920", "top": "0", "left": "961/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "959/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "959/1920", "width": "959/1920", "top": "0", "left": "961/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "539/1080", "width": "959/1920", "top": "541/1080", "left": "961/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "539/1080", "width": "959/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "539/1080", "width": "959/1920", "top": "0", "left": "961/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "538/1080", "width": "959/1920", "top": "541/1080", "left": "0" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "539/1080", "width": "959/1920", "top": "541/1080", "left": "961/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "539/1080", "width": "959/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "539/1080", "width": "959/1920", "top": "0", "left": "961/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "538/1080", "width": "639/1920", "top": "541/1080", "left": "0" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "539/1080", "width": "639/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "539/1080", "width": "638/1920", "top": "0", "left": "641/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "539/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "0" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "539/1080", "width": "638/1920", "top": "541/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "359/1080", "width": "638/1920", "top": "0", "left": "641/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "0" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "358/1080", "width": "638/1920", "top": "361/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "7", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "0" }, "shape": "rectangle" }, { "id": "8", "area": { "height": "359/1080", "width": "638/1920", "top": "721/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "9", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "1281/1920" }, "shape": "rectangle" }] }],
+            ];
+            this.layoutIndex = this.layoutIndex + 1,this.layoutIndex >= layouts.length && (this.layoutIndex = 0);
+            
+            let values = [];
+            layouts[this.layoutIndex].forEach(__ => {
+                let regions = __["region"];
+                let _ = [];
+                regions.forEach(region => {
+                    _.push({ region: region });
+                }),values.push(_);
+            });
+            setLayoutStream(this.myRoomId, this.mixStreamGlobal.id, values);
         },
         clickSpeak:function(e){
             this.isSpeakMuted = !this.isSpeakMuted;
@@ -351,6 +455,8 @@ const _app = new Vue({
             if(!this.localStream || !this.localStream.mediaStream)
             {
                 this.isCameraMuted = true;
+
+                this.publishVideo();
                 return;
             }
             tracks = this.localStream.mediaStream.getVideoTracks();
@@ -359,22 +465,49 @@ const _app = new Vue({
             track && (track.enabled = !this.isCameraMuted);
         },
         clickCamera2:function(e){
+            if(!this.publicationGlobalSecond || !this.localStreamSecond || !this.localStreamSecond.mediaStream)
+            {
+                this.isCamera2Muted = true;
 
+                this.publishVideoSecond();
+                return;
+            }
+            this._clearLocalCameraSecond();
+            this.publicationGlobalSecond && this.publicationGlobalSecond.stop(),this.publicationGlobalSecond = null;
+            this.isCamera2Muted = true;
         },
         clickDesktop:function(e){
             const that = this;
-            ipcRenderer.send('show-screen-publish', `${location.search}&streamId=${that.publicationGlobal.id}`);
+            //ipcRenderer.send('show-screen-publish', `${location.search}&streamId=${that.publicationGlobal.id}`);
+            if(that.publicationScreenGlobal)
+            {
+                that.ScreenStream && that.ScreenStream.mediaStream && that.destroyMediaStream(that.ScreenStream.mediaStream),(that.ScreenStream = null);
+                that.publicationScreenGlobal.stop(),that.publicationScreenGlobal = null;
+                that.isDesktopShared = false;
+                return;
+            }
+            that.screen_data=[];
+            desktopCapturer.getSources({ types: ['screen'] }).then(sources => sources.forEach(source => that.screen_data.push({id:source.id,src:source.thumbnail.toDataURL()})));
+            that.screen_select_visible = true;
         },
         clickRecord:function(e){
 
         },
         exitRoom:function(e){
             const that = this;
-            that.publicationGlobal && that.publicationGlobal.stop(),that.publicationGlobal = null;
-            that.subscriptionGlobal && that.subscriptionGlobal.stop(),that.subscriptionGlobal = null;
-            that.publicationScreenGlobal && that.publicationScreenGlobal.stop(),that.publicationScreenGlobal = null;
-            that.mixStreamGlobal && that.mixStreamGlobal.mediaStream && that.destroyMediaStream(that.mixStreamGlobal.mediaStream),(that.mixStreamGlobal = null);
-            that.conference && that.conference.leave(),that.conference = null;
+
+            try {
+                that.publicationGlobal && that.publicationGlobal.stop(),that.publicationGlobal = null;
+                that.publicationGlobalSecond && that.publicationGlobalSecond.stop(),that.publicationGlobalSecond = null;
+                that.subscriptionGlobal && that.subscriptionGlobal.stop(),that.subscriptionGlobal = null;
+                that.publicationScreenGlobal && that.publicationScreenGlobal.stop(),that.publicationScreenGlobal = null;
+                that.mixStreamGlobal && that.mixStreamGlobal.mediaStream && that.destroyMediaStream(that.mixStreamGlobal.mediaStream),(that.mixStreamGlobal = null);
+                that.conference && that.conference.leave(),that.conference = null;
+            } catch (_) { }
+            that.ScreenStream && that.ScreenStream.mediaStream && that.destroyMediaStream(that.ScreenStream.mediaStream),(that.ScreenStream = null);
+            that.localStream && that.localStream.mediaStream && that.destroyMediaStream(that.localStream.mediaStream),(that.localStream = null);
+            that.conference = that.publicationGlobal = that.subscriptionGlobal = null;
+
             that.playerStream = null;
         },
         destroyMediaStream:function(mediaStream)

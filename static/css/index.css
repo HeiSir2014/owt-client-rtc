@@ -164,10 +164,10 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 
 .video-container .chat>*{
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     background-repeat: no-repeat;
-    background-size: 24px;
+    background-size: 26px;
     background-position: center;
     display: inline;
     vertical-align: middle;
@@ -254,7 +254,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     position: relative;
     background-color: #333333;
     border-bottom: solid 1px #454545;
-    z-index: 2;
+    z-index: 9999;
     -webkit-app-region: drag;
     box-sizing: content-box;
 }
@@ -378,6 +378,17 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     -webkit-app-region: no-drag;
 }
 
+.heisir .desktop .transparent
+{
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    background-color: transparent;
+    border: 0;
+}
+
 .heisir .desktop .screen-dialog{
     display: none;
     position: absolute;
@@ -485,6 +496,8 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     width: fit-content;
     padding: 2px 5px;
     border-radius: 2px;
+    background-color: #444444ee;
+    border: 0;
 }
 
 .heisir .notify_join.left,.heisir .notify_msg.left{
@@ -493,16 +506,22 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 
 .heisir .notify_join .el-notification__content,.heisir .notify_msg .el-notification__content{
     margin:0;
+    color: #e6e6e6;
 }
 
 .heisir .notify_join .el-notification__group,.heisir .notify_msg .el-notification__group{
     margin: 0;
 }
 
+.heisir .notify_msg .el-notification__content img{
+    vertical-align: middle;
+}
+
 .heisir .emoji_popover{
     min-width:auto;
     padding: 5px;
 }
+
 .heisir .emoji_popover ul{
     text-align: center;
 }
@@ -510,9 +529,37 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 .heisir .emoji_popover li{
     display: inline-block;
     cursor: pointer;
+    font-size: 0;
+    outline: 0;
+    inset: 0;
 }
 
 .heisir .emoji_popover li img{
     width: 48px;
     height: 48px;
+}
+
+.heisir .emoji_popover li img:hover{
+    box-sizing: border-box;
+    box-shadow: inset 0px 0px 8px 1px #ccc;
+    border-radius: 15px;
+}
+
+.heisir .screen_select_dialog{
+    width: fit-content;
+    min-width: 40vw;
+}
+
+.heisir .screen_select_dialog .el-dialog__body{
+    text-align: center;
+}
+
+.heisir .screen_select li{
+    list-style: none;
+    display: inline;
+    margin: 0 10px;
+}
+.heisir .screen_select li img{
+    width: 200px;
+    height: auto;
 }

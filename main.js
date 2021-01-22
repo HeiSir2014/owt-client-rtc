@@ -183,8 +183,8 @@ function ipcMessageFun(e,channel,data){
     if(channel === 'show-screen' || (isDev && channel == 'show-screen-publish')){
         screenWindow && (screenWindow.close());
         screenWindow = null;
-        screenWindow = CreateDefaultWin({ webContents: mainWindow.webContents });
-        //screenWindow.loadFile( path.join(__dirname, 'static/screen.html'),{ search:data });
+        screenWindow = CreateDefaultWin();
+        screenWindow.loadFile( path.join(__dirname, 'static/screen.html'),{ search:data });
         screenWindow.moveTop();
         screenWindow.maximize();
         screenWindow.on('closed',()=>{
