@@ -12,8 +12,8 @@
 
 <body class="heisir">
     <div id="App">
-        <div class="header">
-            <div class="title">OWT Client v{{version}}</div>
+        <div v-if="!isMaximized" class="header">
+            <div class="title">OWT Client v{{version}} {{ myRoom ? "| 房间号:"+ myRoom:""}}</div>
             <div class="systools">
                 <div class="minimize" @click="minimize"></div>
                 <div class="close" @click="close"></div>
@@ -27,7 +27,7 @@
             </div>
         </div>
         <div class="video-container">
-            <video class="playRTC" v-if="playerStream" :src-object.prop.camel="playerStream" :muted="IsSpeakMuted" autoplay width="100%" height="100%">
+            <video class="playRTC" v-if="playerStream" :src-object.prop.camel="playerStream" :muted="isSpeakMuted" autoplay width="100%" height="100%">
                 this browser does not supported video tag
             </video>
             <div class="tools">
@@ -51,36 +51,51 @@
                     </el-dropdown> -->
                 </div>
                 <div class="speak" @click="clickSpeak">
-                    <img class="label" :src="IsSpeakMuted?'icon/speak.png':'icon/speak_no.png'" />
-                    <div class="title">{{IsSpeakMuted?'解除静音':'静音'}}</div>
+                    <img class="label" :src="isSpeakMuted?'icon/speak_no.png':'icon/speak.png'" />
+                    <div class="title">{{isSpeakMuted?'解除静音':'静音'}}</div>
                 </div>
-                <div class="audio" @click="clickMicphone">
-                    <img class="label" src="icon/mic_no.png" />
-                    <div class="title">静音</div>
-                    <div class="tip"></div>
+                <div v-if="usedMicrophone" class="audio" @click="clickMicrophone">
+                    <img class="label" :src="isMicMuted?'icon/mic_no.png':'icon/mic.png'"/>
+                    <div class="title">{{isMicMuted?'开启':'静音'}}</div>
+                    <div class="tip">{{ usedMicrophone }}</div>
                 </div>
-                <div class="video" @click="clickCamera">
-                    <img class="label" src="icon/camera_no.png" />
-                    <div class="title">启用</div>
-                    <div class="tip"></div>
+                <div v-if="usedCamera" class="video" @click="clickCamera">
+                    <img class="label" :src="isCameraMuted?'icon/camera_no.png':'icon/camera.png'"/>
+                    <div class="title">{{isCameraMuted?'开启':'关闭'}}</div>
+                    <div class="tip">{{ usedCamera }}</div>
                 </div>
-                <div class="video2" @click="clickCamera2">
-                    <img class="label" src="icon/camera.png" />
-                    <div class="title">启用</div>
-                    <div class="tip"></div>
+                <div v-if="usedCamera2" class="video2" @click="clickCamera2">
+                    <img class="label" :src="isCamera2Muted?'icon/camera_no.png':'icon/camera.png'" />
+                    <div class="title">{{isCamera2Muted?'开启':'关闭'}}</div>
+                    <div class="tip">{{ usedCamera2 }}</div>
                 </div>
                 <div class="desktop" @click="clickDesktop">
-                    <img class="label" src="icon/desktop-share.png" />
-                    <div class="title">分享</div>
+                    <img class="label" :src="isDesktopShared ? 'icon/desktop-share_no.png':'icon/desktop-share.png'" />
+                    <div class="title">{{isDesktopShared?'关闭':'分享'}}</div>
                     <div class="screen-dialog"></div>
                 </div>
                 <div class="record" @click="clickRecord">
-                    <img class="label" src="icon/record.png" />
+                    <img class="label" :src="isRecordStarted?'icon/record_no.png':'icon/record.png'" />
                     <div class="title">录制</div>
                 </div>
                 <div class="exit" @click="close">
                     <img class="label" src="icon/exit.png" />
                     <div class="title">结束</div>
+                </div>
+            </div>
+            <div class="chat">
+                
+                <div class="emoji_group" >
+                    <el-popover v-model="emoji_visible" popper-class="emoji_popover" placement="top" width="204" trigger="click">
+                        <ul >
+                            <li v-for="item in emoji_data" :data="item" @click="sendEmojiMsg"><img :src="'imgs/emoji/' + item + '.png'"></li>
+                        </ul>
+                        <el-button class="emoji" slot="reference"></el-button>
+                    </el-popover>
+                </div>
+                <div class="msg" @click="msg_input_visible = !msg_input_visible"></div>
+                <div v-show="msg_input_visible" class="msg_input">
+                    <input type="text" v-model="msg_content" placeholder="请输入消息内容" @keyup="msg_input_keyup" v-focus="msg_input_visible" @blur="msg_input_visible = false">
                 </div>
             </div>
         </div>

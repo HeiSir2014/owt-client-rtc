@@ -1,19 +1,44 @@
 const { ipcRenderer, desktopCapturer } = require('electron');
 
+Vue.directive('focus', {
+    update: function (el,{oldValue,value}) {
+        oldValue != value && value && el.focus();
+    }
+});
+
 const _app = new Vue({
     el: '#App',
     data:function(){
         return {
             version:'1.0.2',
+            isMaximized:false,
+            myRoom:'',
             statUpload:0,
             statDownload:0,
             playerStream:null,
-            IsSpeakMuted:false
+            isSpeakMuted:false,
+            isMicMuted:false,
+            isCameraMuted:false,
+            isCamera2Muted:false,
+            isDesktopShared:false,
+            isRecordStarted:false,
+            usedMicrophone:'',
+            usedCamera:'',
+            usedCamera2:'',
+            usedCamera2DeviceId:'',
+            msg_input_visible:false,
+            msg_content:'',
+            emoji_visible:false,
+            emoji_data:['emoji_5','emoji_6','emoji_7','emoji_4','emoji_0','emoji_1','emoji_2','emoji_3']
         }
     },
     methods:{
         init:function(e){
             const that = this;
+
+            ipcRenderer.on('maximizeChanged',that.maximizeChanged.bind(that));
+            window.addEventListener('keyup', that.keyup.bind(that));
+
             that.myRoom = getParameterByName('room');
             that.myUserId = getParameterByName('userId');
             that.myUserNick = getParameterByName('userNick');
@@ -22,6 +47,12 @@ const _app = new Vue({
 
             that.enableAudio = ((!that.enableAudio || that.enableAudio=='true') ? true : false);
             that.enableVideo = ((!that.enableVideo || that.enableVideo=='true') ? true : false);
+
+            that.isMicMuted = true;
+            that.isCameraMuted = true;
+            that.isCamera2Muted = true;
+            that.isDesktopShared = false;
+            that.isRecordStarted = false;
 
             createToken(that.myRoom, that.myUserId, 'presenter',function (response) {
                 var token = response;
@@ -60,12 +91,46 @@ const _app = new Vue({
                     }
                 });
     
+                that.conference.addEventListener('participantjoined', that.participantjoined.bind(that));
                 that.conference.addEventListener('streamadded', that.streamadded.bind(that));
-                that.conference.addEventListener('streamadded', that.streamadded.bind(that));
+                that.conference.addEventListener('messagereceived', that.messagereceived.bind(that));
+                that.conference.addEventListener('serverdisconnected', that.serverdisconnected.bind(that));
 
                 that.statInterval && (clearInterval(statInterval),that.statInterval = 0);
                 that.statInterval = setInterval(that._getStat.bind(that), 1000);
             });
+        },
+        keyup:function(e){
+            e.keyCode == 27 && this.isMaximized && ipcRenderer.send('unmaximize-win');
+            return e.keyCode != 27;
+        },
+        msg_input_keyup:function(e){
+            e.keyCode == 13 && (this._sendMsg('msg_text',this.msg_content),this.msg_content = '');
+            return e.keyCode != 13;
+        },
+        _sendMsg:function(type,content){
+            if(!this.conference) return;
+            let msg = {type:type,content:content};
+            this.conference.send( msg );
+            this.showMessage(this.myUserId,msg);
+        },
+        sendEmojiMsg:function(e) {
+            this._sendMsg('msg_emoji',e.target.parentElement.getAttribute('data'));
+            this.emoji_visible = false;
+        },
+        maximizeChanged:function( event , isMaximized ) {
+            this.isMaximized = isMaximized;
+            if(this.isMaximized)
+            {
+                this.$message({
+                    message: '按下 ESC 键可以退出全屏',
+                    center: true,
+                    iconClass: '',
+                    customClass: 'message_tip',
+                    duration: 3000,
+                    offset: (document.body.clientHeight / 2)
+                });
+            }
         },
         close:function(e){
             this.exitRoom();
@@ -86,14 +151,14 @@ const _app = new Vue({
                 }
             }).then((subscription) => {
                 that.mixStreamGlobal = stream;
-                that.subscirptionGlobal = subscription;
+                that.subscriptionGlobal = subscription;
                 that.playerStream = stream.mediaStream;
 
-                that.IsSpeakMuted = false;
+                that.isSpeakMuted = false;
             }, (err) => {
                 that.playerStream = null;
                 that.mixStreamGlobal = null;
-                that.subscirptionGlobal = null;
+                that.subscriptionGlobal = null;
                 console.log('subscribe failed', err);
             });
             stream.addEventListener('ended', () => {
@@ -105,18 +170,66 @@ const _app = new Vue({
                 console.log(`${stream.id} is updated`);
             });
         },
-        streamadded:function(event){
+        participantjoined:function(e){
+            console.log('participantjoined',e)
+            var audio = new Audio('audio/some_one_join_room.wav'); // path to file
+            audio.play();
+            audio = null;
+            this.$notify({
+                customClass:'notify_join',
+                message: `成员 ${e.participant.userId} 加入频道`,
+                position: 'bottom-left',
+                duration: 4000,
+                showClose: false,
+                offset: 84
+            });
+        },
+        messagereceived:function(e){
+            
+            console.log(e);
+            if(e.origin == this.myId) return;
+            if(e.message.type == 'msg_text' || e.message.type == 'msg_emoji')
+            {
+                this.showMessage(e.origin, e.message);
+            }
+
+            
+        },
+        showMessage:function(userId, message){
+            message.type == 'msg_text' && this.$notify({
+                customClass: 'notify_msg',
+                message: `${userId} : ${ message.content }`,
+                position: 'bottom-left',
+                duration: 0,
+                showClose: false,
+                offset: 84
+            });
+            message.type == 'msg_emoji' && this.$notify({
+                customClass: 'notify_msg emoji',
+                message: `${userId} : <img src="imgs/emoji/${ message.content }.png" width="24" height="24" />`,
+                position: 'bottom-left',
+                duration: 0,
+                dangerouslyUseHTMLString:true,
+                showClose: false,
+                offset: 84
+            });
+        },
+        serverdisconnected:function(e){
+            console.log('serverdisconnected',e)
+            this.exitRoom();
+        },
+        streamadded:function(e){
             const that = this;
-            console.log('A new stream is added ', event.stream.id);
+            console.log('A new stream is added ', e.stream.id);
             //isSelf = isSelf?isSelf:event.stream.id != publicationGlobal.id;
             //mixStream(that.myRoomId, event.stream.id, ['common','presenters']);
-            if (event.stream.origin !== that.myId && event.stream.source
-                && event.stream.source.video
-                && event.stream.source.video == 'screen-cast') {
-                ipcRenderer.send('show-screen', `${location.search}&streamId=${event.stream.id}`);
+            if (e.stream.origin !== that.myId && e.stream.source
+                && e.stream.source.video
+                && e.stream.source.video == 'screen-cast') {
+                ipcRenderer.send('show-screen', `${location.search}&streamId=${e.stream.id}`);
             }
-            event.stream.addEventListener('ended', () => {
-                console.log(event.stream.id + ' is ended.');
+            e.stream.addEventListener('ended', () => {
+                console.log(e.stream.id + ' is ended.');
             });
         },
         publishVideo:async function(){
@@ -146,53 +259,48 @@ const _app = new Vue({
             let aT = mediaStream.getAudioTracks();
             let videoTrack,audioTrack;
             vT && vT.length && (videoTrack =vT[0] ) && 
-            (document.querySelector('.tools .video .tip').innerHTML = videoTrack.label.replace(/ ?\([\w:]{9}\)/,'')) &&
-            (document.querySelector('.tools .video .title').innerHTML = '禁用');
-            (document.querySelector('.tools .video .label').src = 'icon/camera_no.png');
+            (that.usedCamera = videoTrack.label.replace(/ ?\([\w:]{9}\)/,''))
             aT && aT.length && (audioTrack = aT[0]) &&
-            (document.querySelector('.tools .audio .tip').innerHTML = audioTrack.label.replace(/ ?\([\w:]{9}\)/,'')) &&
-            (document.querySelector('.tools .audio .title').innerHTML = '静音') &&
-            (document.querySelector('.tools .audio .label').src = 'icon/mic_no.png');
+            (that.usedMicrophone = audioTrack.label.replace(/ ?\([\w:]{9}\)/,''))
 
             let devices = await navigator.mediaDevices.enumerateDevices();
-            let videoInputDevices = devices.filter(d => d.kind && d.kind == 'videoinput');
-            if(videoInputDevices.length >= 2 && videoTrack)
+            let vDevices = devices.filter(d => d.kind && d.kind == 'videoinput');
+            if(vDevices.length >= 2 && videoTrack)
             {
-                videoInputDevices = videoInputDevices.filter(d => d.label != videoTrack.label);
-                videoInputDevices && videoInputDevices.length && (document.querySelector('.tools .video2 .tip').innerHTML = videoInputDevices[0].label.replace(/ ?\([\w:]{9}\)/,''))
-                && (document.querySelector('.tools .video2').setAttribute('deviceId',videoInputDevices[0].deviceId)) &&
-                (document.querySelector('.tools .video2 .title').innerHTML = '启用')&&
-                (document.querySelector('.tools .video2 .label').src = 'icon/camera.png');
-                
+                vDevices = vDevices.filter(d => d.label != videoTrack.label);
+                vDevices && vDevices.length && (that.usedCamera2 = vDevices[0].label.replace(/ ?\([\w:]{9}\)/,''),that.usedCamera2DeviceId = vDevices[0].deviceId)
             }
-
+            else
+            {
+                that.usedCamera2 = '';
+                that.usedCamera2DeviceId = '';
+            }
+            
             audioTrack && (audioTrack.enabled = that.enableAudio);
             videoTrack && (videoTrack.enabled = that.enableVideo);
 
-            that.localStream = new Owt.Base.LocalStream(
-                mediaStream, new Owt.Base.StreamSourceInfo(
-                    'mic', 'camera'));
+            that.isCameraMuted = videoTrack ? !videoTrack.enabled : true;
+            that.isMicMuted = audioTrack ? !audioTrack.enabled : true;
+
+            that.localStream = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('mic', 'camera'));
             try {
                 that.publicationGlobal = await that.conference.publish(that.localStream, { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 2500 }] });
             } catch (error) {
                 that.publicationGlobal = null;
                 console.error(error);
-                that.localStream && that.localStream.mediaStream && that.destroyMediaStream(that.localStream.mediaStream),(that.localStream = null);
+                that._clearLocalCamera();
             }
-            if(!that.publicationGlobal) return;
-            mixStream(that.myRoomId, that.publicationGlobal.id, ['common', 'presenters'])
-            let clearLocalCamera = (err)=>{
-                that.localStream && that.localStream.mediaStream && that.destroyMediaStream(that.localStream.mediaStream),(that.localStream = null);
-                console.log('Publication error: ' + err.error.message);
-
-                (document.querySelector('.tools .video .title').innerHTML = '启用')
-                (document.querySelector('.tools .video .label').src = 'icon/camera.png')
-                (document.querySelector('.tools .audio .title').innerHTML = '启用')
-                (document.querySelector('.tools .video .label').src = 'icon/mic.png')
-            };
+            if(!that.publicationGlobal)
+                return;
+            mixStream(that.myRoomId, that.publicationGlobal.id, ['common', 'presenters']);
+            that.publicationGlobal.addEventListener('error',that._clearLocalCamera.bind(that));
+            that.publicationGlobal.addEventListener('end',  that._clearLocalCamera.bind(that));
+        },
+        _clearLocalCamera:function(){
+            const that = this;
+            that.localStream && that.localStream.mediaStream && that.destroyMediaStream(that.localStream.mediaStream),(that.localStream = null);
             
-            that.publicationGlobal.addEventListener('error',clearLocalCamera);
-            that.publicationGlobal.addEventListener('end',clearLocalCamera);
+            that.isCameraMuted = that.isMicMuted = true;
         },
         _getStat:async function() {
             const that = this;
@@ -205,7 +313,7 @@ const _app = new Vue({
                 /^RTCIceCandidatePair/.test(stat['id']) && stat['bytesReceived'] && (bytesReceived = bytesReceived + stat['bytesReceived']);
             }
 
-            that.subscirptionGlobal && (stats = await that.subscirptionGlobal.getStats());
+            that.subscriptionGlobal && (stats = await that.subscriptionGlobal.getStats());
             stats && stats.forEach(statForEach) && (stats = null);
             that.publicationGlobal && (stats = await that.publicationGlobal.getStats());
             stats && stats.forEach(statForEach) && (stats = null);
@@ -224,19 +332,38 @@ const _app = new Vue({
             that.bytesSentGlobal = bytesSent;
         },
         clickSpeak:function(e){
-            this.IsSpeakMuted = !this.IsSpeakMuted;
+            this.isSpeakMuted = !this.isSpeakMuted;
         },
-        clickMicphone:function(e){
-
+        clickMicrophone:function(e){
+            let tracks,track;
+            if(!this.localStream || !this.localStream.mediaStream)
+            {
+                this.isCameraMuted = true;
+                return;
+            }
+            tracks = this.localStream.mediaStream.getAudioTracks();
+            tracks && tracks.length && (track = tracks[0]);
+            this.isMicMuted = track ? !this.isMicMuted : true;
+            track && (track.enabled = !this.isMicMuted);
         },
         clickCamera:function(e){
-
+            let tracks,track;
+            if(!this.localStream || !this.localStream.mediaStream)
+            {
+                this.isCameraMuted = true;
+                return;
+            }
+            tracks = this.localStream.mediaStream.getVideoTracks();
+            tracks && tracks.length && (track = tracks[0]);
+            this.isCameraMuted = track ? !this.isCameraMuted : true;
+            track && (track.enabled = !this.isCameraMuted);
         },
         clickCamera2:function(e){
 
         },
         clickDesktop:function(e){
-
+            const that = this;
+            ipcRenderer.send('show-screen-publish', `${location.search}&streamId=${that.publicationGlobal.id}`);
         },
         clickRecord:function(e){
 
@@ -244,7 +371,7 @@ const _app = new Vue({
         exitRoom:function(e){
             const that = this;
             that.publicationGlobal && that.publicationGlobal.stop(),that.publicationGlobal = null;
-            that.subscirptionGlobal && that.subscirptionGlobal.stop(),that.subscirptionGlobal = null;
+            that.subscriptionGlobal && that.subscriptionGlobal.stop(),that.subscriptionGlobal = null;
             that.publicationScreenGlobal && that.publicationScreenGlobal.stop(),that.publicationScreenGlobal = null;
             that.mixStreamGlobal && that.mixStreamGlobal.mediaStream && that.destroyMediaStream(that.mixStreamGlobal.mediaStream),(that.mixStreamGlobal = null);
             that.conference && that.conference.leave(),that.conference = null;

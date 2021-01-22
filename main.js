@@ -135,27 +135,38 @@ function CreateDefaultWin(options)
     isDev && win.webContents.openDevTools();
     //win.openDevTools();
     win.webContents.on('ipc-message',ipcMessageFun);
-    win.webContents.on('new-window', (event, url, frameName, disposition, options) => {
+    win.on('maximize',maximizeChanged);
+    win.on('unmaximize',maximizeChanged);
+    win.webContents.on('new-window', function(event, url, frameName, disposition, options){
         event.preventDefault();
         shell.openExternal(url);
+    });
+    win.webContents.on('dom-ready',function(e){
+        let win = BrowserWindow.fromWebContents(e.sender);
+        e.sender.send('maximizeChanged', win.isMaximized());
     });
     return win;
 }
 
+function maximizeChanged(e){
+    console.log("isMaximized",e.sender.isMaximized());
+    e.sender.webContents.send('maximizeChanged', e.sender.isMaximized());
+}
+
+
 function ipcMessageFun(e,channel,data){
-    logger.info( `win webContents Id:${ e.sender.id } | ${channel} | ${data}`);
+    logger.info( `win webContents Id: ${ e.sender.id } | ${channel} | ${data}`);
     let win = BrowserWindow.fromWebContents( webContents.fromId(e.sender.id) );
     if(win == null)
     { 
         logger.error( `winId:${e.sender.id } | win = null`);
         return;
     }
-    if (channel === 'close-win') {
-        win.close();
-        return;
-    }
-    if (channel === 'minimize-win') {
-        win.minimize();
+    
+    if (/-win$/.test(channel)) {
+        const cmd = channel.replace(/-win$/,'');
+        isDev && cmd == 'close' && win.webContents.closeDevTools();
+        win[cmd].call(win);
         return;
     }
 
@@ -172,8 +183,8 @@ function ipcMessageFun(e,channel,data){
     if(channel === 'show-screen' || (isDev && channel == 'show-screen-publish')){
         screenWindow && (screenWindow.close());
         screenWindow = null;
-        screenWindow = CreateDefaultWin();
-        screenWindow.loadFile( path.join(__dirname, 'static/screen.html'),{ search:data });
+        screenWindow = CreateDefaultWin({ webContents: mainWindow.webContents });
+        //screenWindow.loadFile( path.join(__dirname, 'static/screen.html'),{ search:data });
         screenWindow.moveTop();
         screenWindow.maximize();
         screenWindow.on('closed',()=>{

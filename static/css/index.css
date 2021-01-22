@@ -19,11 +19,19 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     margin: 0 auto;
     width: 100%;
     height: 100%;
+    position: absolute;
     overflow: hidden;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
   }
   
 .video-container video{
-    object-fit: cover;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
 }
 
 @keyframes toolsAnimation{
@@ -100,9 +108,10 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 .video-container .tools .label{
     width: 28px;
-    height: 72%;
+    height: 60%;
     line-height: 1.0;
     object-fit: contain;
+    margin-top: 5px;
 }
 .video-container .tools .tip{
     display: none;
@@ -124,7 +133,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     left: -30px;
 }
 
-.video-container .tools .video2,.video-container .tools .record{
+.video-container .tools .record{
     display: none;
 }
 
@@ -140,6 +149,78 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     font-weight: 400;
     letter-spacing: 2px;
     text-indent:2px;
+}
+
+.video-container .chat{
+    position: absolute;
+    width: fit-content;
+    height: fit-content;
+    bottom: 50px;
+    left: 16px;
+    background-color:#FAFAFA;
+    border-radius: 2px;
+    padding: 0 5px;
+    -webkit-app-region: no-drag;
+}
+
+.video-container .chat>*{
+    width: 28px;
+    height: 28px;
+    background-repeat: no-repeat;
+    background-size: 24px;
+    background-position: center;
+    display: inline;
+    vertical-align: middle;
+    font-size: 0;
+    float: left;
+}
+.video-container .chat .emoji_group span
+{
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.video-container .chat .emoji_group span button{
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+}
+
+.video-container .chat .emoji{
+    background-image: url(../icon/emoji.png);
+    
+    background-repeat: no-repeat;
+    background-size: 24px;
+    background-position: center;
+    
+}
+.video-container .chat .emoji:hover{
+    background-image: url(../icon/emoji_hover.png);
+}
+.video-container .chat .msg{
+    background-image: url(../icon/msg.png);
+    
+}
+.video-container .chat .msg:hover{
+    background-image: url(../icon/msg_hover.png);
+}
+
+.video-container .chat .msg_input{
+    width: 120px;
+    padding: 2px 5px;
+    border-left: solid 1px #aaa;
+}
+
+.video-container .chat .msg_input > input{
+    width: 100%;
+    height: 100%;
+    line-height: 1.0;
+    border: 0;
+    padding: 0 5px;
+    font-size: 12px;
+    margin: 0;
 }
 
 .video-container .drag{
@@ -170,7 +251,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 .heisir .header{
     width: 100%;
     height: 32px;
-    position: absolute;
+    position: relative;
     background-color: #333333;
     border-bottom: solid 1px #454545;
     z-index: 2;
@@ -181,8 +262,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 .heisir .toolbar{
     width: 100%;
     height: fit-content;
-    position: absolute;
-    top: 33px;
+    position: relative;
     z-index: 2;
 }
 
@@ -192,13 +272,13 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     right: 0;
     position: absolute;
     text-align: left;
-    background-color: #00000044;
+    background-color: #00000088;
     height: 24px;
     padding: 0 5px;
     box-sizing: content-box;
     border-bottom-left-radius: 4px;
 }
-.heisir .network *{
+.heisir .network >*{
     font-size: 10px;
     line-height: 24px;
     font-style: normal;
@@ -213,6 +293,9 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 }
 .heisir .network .upload,.heisir .network .download{
     width: fit-content;
+    min-width: 72px;
+    text-indent: 1px;
+    text-align: left;
 }
 .heisir .network .wireless{
     width: 12px;
@@ -383,4 +466,53 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 
 .systemTool .el-button+.el-button{
     margin-left: 0 !important;
+}
+
+.heisir .message_tip{
+    width: fit-content;
+    min-width: auto;
+    border: 0;
+    background-color:#66666680;
+}
+
+.heisir .message_tip .el-message__content{
+    color: #fff;
+}
+
+.heisir .notify_join,.heisir .notify_msg{
+    width: fit-content;
+    min-width: 0;
+    width: fit-content;
+    padding: 2px 5px;
+    border-radius: 2px;
+}
+
+.heisir .notify_join.left,.heisir .notify_msg.left{
+    left: 16px;
+}
+
+.heisir .notify_join .el-notification__content,.heisir .notify_msg .el-notification__content{
+    margin:0;
+}
+
+.heisir .notify_join .el-notification__group,.heisir .notify_msg .el-notification__group{
+    margin: 0;
+}
+
+.heisir .emoji_popover{
+    min-width:auto;
+    padding: 5px;
+}
+.heisir .emoji_popover ul{
+    text-align: center;
+}
+
+.heisir .emoji_popover li{
+    display: inline-block;
+    cursor: pointer;
+}
+
+.heisir .emoji_popover li img{
+    width: 48px;
+    height: 48px;
 }
