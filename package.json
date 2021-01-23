@@ -111,7 +111,7 @@
       "installerHeaderIcon": "static/icon/logo.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "OWT-Client"
+      "shortcutName": "OWT Client"
     },
     "appImage": {
       "category": "public.app-category.productivity"
