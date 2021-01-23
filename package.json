@@ -1,7 +1,7 @@
 {
-  "name": "owt-client-rtc",
-  "version": "1.0.1",
-  "description": "owt-client-rtc",
+  "name": "owt-client",
+  "version": "1.0.3",
+  "description": "owt-client",
   "main": "main.js",
   "repository": {
     "type": "git",
@@ -50,12 +50,8 @@
       "**/*",
       "!dist/*",
       "!.github/*",
-      "!test/*",
       "!README.md",
-      "!node_modules/ffmpeg-static/ffmpeg.exe",
-      "!node_modules/ffmpeg-static/ffmpeg",
-      "!node_modules/ffmpeg-static/ffmpeg.ffmpeg",
-      "!resource/aria2/*"
+      "!.gitignore"
     ],
     "asar": true,
     "win": {
