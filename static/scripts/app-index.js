@@ -32,7 +32,10 @@ const _app = new Vue({
             emoji_visible:false,
             emoji_data:['emoji_5','emoji_6','emoji_7','emoji_4','emoji_0','emoji_1','emoji_2','emoji_3'],
             screen_data:[],
-            screen_select_visible:false
+            screen_select_visible:false,
+            lastmoveTime:0,
+            autoHideIntelval:null,
+            tools_visible:true
         }
     },
     methods:{
@@ -41,6 +44,7 @@ const _app = new Vue({
 
             ipcRenderer.on('maximizeChanged',that.maximizeChanged.bind(that));
             window.addEventListener('keyup', that.keyup.bind(that));
+            window.addEventListener('mousemove', that.mousemove.bind(that));
 
             that.myRoom = getParameterByName('room');
             that.myUserId = getParameterByName('userId');
@@ -106,8 +110,28 @@ const _app = new Vue({
             });
         },
         keyup:function(e){
-            e.keyCode == 27 && this.isMaximized && ipcRenderer.send('unmaximize-win');
+            e.keyCode == 27 && this.isMaximized && ipcRenderer.send('setFullScreen-win',false);
             return e.keyCode != 27;
+        },
+        mousemove:function(e){
+            if(this.autoHideIntelval == null)
+            {
+                document.body.style.cursor = "default";
+                this.tools_visible =true;
+                this.autoHideIntelval = setInterval(this.autoHideCursor.bind(this), 1000);
+
+
+            }
+            this.lastmoveTime = new Date().getTime();
+            return true;
+        },
+        autoHideCursor:function(e){
+            if(this.lastmoveTime && new Date().getTime() - 2000 > this.lastmoveTime){
+
+                clearInterval(this.autoHideIntelval),this.autoHideIntelval = null;
+                document.body.style.cursor = "none";
+                this.tools_visible = false;
+            }
         },
         msg_input_keyup:function(e){
             e.keyCode == 13 && this.msg_content && (this._sendMsg('msg_text',this.msg_content),this.msg_content = '');
@@ -136,6 +160,12 @@ const _app = new Vue({
                     offset: (document.body.clientHeight / 2) - 24
                 });
             }
+        },
+        fullscreen:function(e){
+            ipcRenderer.send('setFullScreen-win',true);
+        },
+        unfullscreen:function(e){
+            ipcRenderer.send('setFullScreen-win',false);
         },
         close:function(e){
             this._exitRoom();

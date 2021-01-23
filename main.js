@@ -79,6 +79,8 @@ let localConfig;
                 mainWindow.focus();
                 mainWindow.moveTop();
                 //mainWindow.maximize();
+                mainWindow.setFullScreen(true);
+
             });
         }
     });
@@ -135,26 +137,26 @@ function CreateDefaultWin(options)
     isDev && win.webContents.openDevTools();
     //win.openDevTools();
     win.webContents.on('ipc-message',ipcMessageFun);
-    win.on('maximize',maximizeChanged);
-    win.on('unmaximize',maximizeChanged);
+    win.on('enter-full-screen',fullScreenChanged);
+    win.on('leave-full-screen',fullScreenChanged);
     win.webContents.on('new-window', function(event, url, frameName, disposition, options){
         event.preventDefault();
         shell.openExternal(url);
     });
     win.webContents.on('dom-ready',function(e){
         let win = BrowserWindow.fromWebContents(e.sender);
-        e.sender.send('maximizeChanged', win.isMaximized());
+        e.sender.send('maximizeChanged', win.isFullScreen());
     });
     return win;
 }
 
-function maximizeChanged(e){
-    console.log("isMaximized",e.sender.isMaximized());
-    e.sender.webContents.send('maximizeChanged', e.sender.isMaximized());
+function fullScreenChanged(e){
+    e.sender.webContents.send('maximizeChanged', !e.sender.isFullScreen());
 }
 
 
-function ipcMessageFun(e,channel,data){
+function ipcMessageFun(e,channel,...theArgs){
+    const data = theArgs.length ? theArgs[0] : null;
     logger.info( `win webContents Id: ${ e.sender.id } | ${channel} | ${data}`);
     let win = BrowserWindow.fromWebContents( webContents.fromId(e.sender.id) );
     if(win == null)
@@ -166,7 +168,7 @@ function ipcMessageFun(e,channel,data){
     if (/-win$/.test(channel)) {
         const cmd = channel.replace(/-win$/,'');
         isDev && cmd == 'close' && win.webContents.closeDevTools();
-        win[cmd].call(win);
+        win[cmd].call(win,...theArgs);
         return;
     }
 
@@ -174,7 +176,6 @@ function ipcMessageFun(e,channel,data){
         if(fs.existsSync(localConfig))
         {
             let con = JSON.parse(fs.readFileSync(localConfig,{encoding:'utf-8',flag:'r'}));
-            
             win.webContents.send('getUserRsp',con);
         }
         return;
@@ -205,12 +206,13 @@ function ipcMessageFun(e,channel,data){
         }
         JSON.stringify(con) != lastConfigStr && (fs.writeFileSync(localConfig,JSON.stringify(con),{encoding:'utf-8'}));
 
-        mainWindow = CreateDefaultWin();
+        mainWindow = CreateDefaultWin({maximizable:false});
         mainWindow.loadFile( path.join(__dirname, 'static/index.html'),{ query:param });
         mainWindow.on('closed', () => {
             mainWindow = null;
         });
         mainWindow.once('ready-to-show',()=>{
+            mainWindow.setAspectRatio(16.0/9.0);
             mainWindow.focus();
             mainWindow.moveTop();
             //mainWindow.maximize();

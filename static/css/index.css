@@ -52,14 +52,14 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     box-shadow: 0px 0px 3px 0px #4f4f4f8f;
     overflow: visible;
     padding: 0;
-    opacity: 0;
+    opacity: 0.85;
     -webkit-app-region: no-drag;
 }
-
+/* 
 .video-container .tools:hover{
     animation: toolsAnimation 1.5s;
     opacity:1;
-}
+} */
 
 .video-container .tools:hover >*{
     filter: none;
@@ -266,17 +266,19 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     z-index: 2;
 }
 
+.heisir .toolbar >:last-child{
+    border-bottom-left-radius: 4px;
+}
 
 .heisir .network{
     width: fit-content;
-    right: 0;
-    position: absolute;
+    position: relative;
     text-align: left;
     background-color: #00000088;
     height: 24px;
     padding: 0 5px;
     box-sizing: content-box;
-    border-bottom-left-radius: 4px;
+    float: right;
 }
 .heisir .network >*{
     font-size: 10px;
@@ -303,10 +305,47 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     margin-right: 5px;
 }
 
+.heisir .fullscreenbar{
+    width: 24px;
+    right: 0;
+    position: relative;
+    background-color: #00000088;
+    height: 24px;
+    padding: 0;
+    box-sizing: content-box;
+    font-size: 0;
+    outline: 0;
+    float: right;
+}
+
+.heisir .fullscreenbar .fullscreen{
+    width: 100%;
+    height: 100%;
+    background-image: url(../icon/fullscreen.png);
+    background-repeat: no-repeat;
+    background-size: 18px;
+    background-position: center;
+    display: inline-block;
+}
+.heisir .fullscreenbar .unfullscreen{
+    width: 100%;
+    height: 100%;
+    background-image: url(../icon/fullscreen_no.png);
+    background-repeat: no-repeat;
+    background-size: 18px;
+    background-position: center;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.heisir .fullscreenbar .unfullscreen:hover {
+    background-color: #00000044;
+}
+
 .heisir .header > *{
     display: inline-block;
 }
-.heisir .systools{
+.heisir .systools {
     width: fit-content;
     right: 0px;
     position: absolute;
@@ -333,13 +372,24 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     width: 32px;
     height: 100%;
     display: inline-block;
-}
-
-.heisir .systools .minimize{
-    background-image: url(../icon/minimize.png);
-    background-size: 14px 14px;
+    vertical-align: middle;
+    color: #e5e5e5;
+    font-size: 0;
+    background-size: 14px;
     background-repeat: no-repeat;
     background-position: center;
+}
+
+.heisir .systools .fullscreen{
+    background-image: url(../icon/fullscreen.png);
+    
+    background-size: 18px;
+}
+.heisir .systools .fullscreen:hover{
+    background-image: url(../icon/fullscreen_hover.png);
+}
+.heisir .systools .minimize{
+    background-image: url(../icon/minimize.png);
 }
 
 .heisir .systools .minimize:hover{
@@ -349,9 +399,6 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 
 .heisir .header .systools .close{
     background-image: url(../icon/close.png);
-    background-size: 14px 14px;
-    background-repeat: no-repeat;
-    background-position: center;
 }
 
 .heisir .header .systools .close:hover{
