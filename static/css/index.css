@@ -52,7 +52,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     box-shadow: 0px 0px 3px 0px #4f4f4f8f;
     overflow: visible;
     padding: 0;
-    opacity: 1;
+    opacity: 0;
     -webkit-app-region: no-drag;
 }
 
@@ -507,10 +507,31 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 .heisir .notify_join .el-notification__content,.heisir .notify_msg .el-notification__content{
     margin:0;
     color: #e6e6e6;
+    text-indent: 2px;
+    letter-spacing: 2px;
+    vertical-align: middle;
 }
 
 .heisir .notify_join .el-notification__group,.heisir .notify_msg .el-notification__group{
     margin: 0;
+}
+
+.heisir .notify_msg .el-notification__content div{
+    display: inline-block;
+    height: 24px;
+    line-height: 24px;
+    margin: 0;
+    padding: 0;
+    vertical-align: middle;
+}
+
+.heisir .notify_msg .el-notification__content .nick{
+    color: #efff00;
+}
+
+.heisir .notify_msg .el-notification__content .content{
+    color: #efefef;
+    vertical-align: middle;
 }
 
 .heisir .notify_msg .el-notification__content img{

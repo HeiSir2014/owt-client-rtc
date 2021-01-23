@@ -57,6 +57,8 @@ const _app = new Vue({
             that.isDesktopShared = false;
             that.isRecordStarted = false;
 
+            that.checkDevices();
+
             createToken(that.myRoom, that.myUserId, 'presenter',function (response) {
                 var token = response;
                 if(!token)
@@ -69,7 +71,7 @@ const _app = new Vue({
                     that.myId = resp.self.id;
                     that.myRoomId = resp.id;
                     
-                    (that.enableAudio || that.enableAudio) && that.publishVideo();
+                    (that.enableAudio || that.enableVideo) && that.publishVideo();
 
                     var streams = resp.remoteStreams;
                     for (const stream of streams) {
@@ -136,7 +138,7 @@ const _app = new Vue({
             }
         },
         close:function(e){
-            this.exitRoom();
+            this._exitRoom();
             ipcRenderer.send("close-win");
         },
         minimize:function(e){
@@ -177,10 +179,21 @@ const _app = new Vue({
             if( /robot/.test(e.participant.userId) ) return;
             console.log('participantjoined',e);
 
+            e.participant.addEventListener('left',this.participantleft.bind(this,e.participant))
+
+            console.log(this.conference.info);
             var audio = new Audio('audio/some_one_join_room.wav'); // path to file
             audio.play();
             audio = null;
-            this.showMessage(null,{type:'msg_text',content:`成员 ${ e.participant.userId } 加入频道`});
+            this.showMessage(null,{type:'msg_text',content:`<div class=content>成员 <div class=nick>${ e.participant.userId }</div> 加入频道</div>`});
+        },
+        participantleft:function(participant,e){
+            console.log('participantleft',e);
+
+            var audio = new Audio('audio/some_one_join_room.wav'); // path to file
+            audio.play();
+            audio = null;
+            this.showMessage(null,{type:'msg_text',content:`<div class=content>成员 <div class=nick>${ participant.userId }</div> 离开频道</div>`});
         },
         messagereceived:function(e){
             
@@ -194,14 +207,15 @@ const _app = new Vue({
             
         },
         showMessage:function(userId, message){
-            const duration = 8000;
+            const duration = 8888;
             const offset = 94;
             const spacing = 2;
             message.type == 'msg_text' && this.$notify({
                 customClass: 'notify_msg',
-                message: `${userId ? (userId + ":"):''}${ message.content }`,
+                message: `${userId ? ('<div class=nick>' + userId + '</div>'):'' } <div class=content>${ message.content }</div>`,
                 position: 'bottom-left',
                 duration: duration,
+                dangerouslyUseHTMLString: true,
                 showClose: false,
                 offset: offset,
                 spacing: spacing,
@@ -209,7 +223,18 @@ const _app = new Vue({
             });
             message.type == 'msg_emoji' && this.$notify({
                 customClass: 'notify_msg emoji',
-                message: `${userId ? (userId + ":"):''} : <img src="imgs/emoji/${ message.content }.png" width="28" height="28" />`,
+                message: `${userId ? ('<div class=nick>' + userId + '</div>'):'' } <img src="imgs/emoji/${ message.content }.png" width="28" height="28" />`,
+                position: 'bottom-left',
+                duration: duration,
+                dangerouslyUseHTMLString: true,
+                showClose: false,
+                offset: offset,
+                spacing: spacing,
+                insertHead: true
+            });
+            message.type == 'msg_html' && this.$notify({
+                customClass: 'notify_msg emoji',
+                message: `${userId ? ('<div class=nick>' + userId + '</div>'):'' } ${message.content}`,
                 position: 'bottom-left',
                 duration: duration,
                 dangerouslyUseHTMLString: true,
@@ -221,7 +246,7 @@ const _app = new Vue({
         },
         serverdisconnected:function(e){
             console.log('serverdisconnected',e)
-            this.exitRoom();
+            this._exitRoom();
         },
         streamadded:function(e){
             const that = this;
@@ -237,17 +262,79 @@ const _app = new Vue({
                 console.log(e.stream.id + ' is ended.');
             });
         },
-        publishVideo:async function(){
+        checkDevices:async function(){
             const that = this;
             let videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
             let audioConstraints = [new Owt.Base.AudioTrackConstraints(Owt.Base.AudioSourceInfo.MIC),false];
-            let resolutions = [{ width: 1280, height: 720 },{ width: 640, height: 360 },undefined];
+            let resolutions = [{ width: 1280, height: 720 },undefined,false];
             let mediaStream;
             for (const audioConstraint of audioConstraints) {
                 for (const resolution of resolutions) {
                     try {
-                        videoConstraints.resolution = resolution;
-                        if(resolution == undefined) delete videoConstraints.resolution;
+                        if(resolution === false)
+                        {
+                            videoConstraints = false;
+                        }
+                        else
+                        {
+                            videoConstraints.resolution = resolution;
+                            if(resolution == undefined) delete videoConstraints.resolution;
+                        }
+                        mediaStream = await Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
+                            audioConstraint, videoConstraints));
+                        break;
+                    } catch (error) {
+                        mediaStream = null;
+                        console.error(error);
+                    }
+                }
+                if(mediaStream) break;
+            }
+            if(!mediaStream) return;
+            let vT = mediaStream.getVideoTracks();
+            let aT = mediaStream.getAudioTracks();
+            let videoTrack,audioTrack;
+            vT && vT.length && (videoTrack =vT[0] ) && 
+            (that.usedCamera = videoTrack.label.replace(/ ?\([\w:]{9}\)/,''))
+            aT && aT.length && (audioTrack = aT[0]) &&
+            (that.usedMicrophone = audioTrack.label.replace(/ ?\([\w:]{9}\)/,''))
+
+            try {
+                let devices = await navigator.mediaDevices.enumerateDevices();
+                let vDevices = devices.filter(d => d.kind && d.kind == 'videoinput');
+                if(vDevices.length >= 2 && videoTrack)
+                {
+                    vDevices = vDevices.filter(d => d.label != videoTrack.label);
+                    vDevices && vDevices.length && (that.usedCamera2 = vDevices[0].label.replace(/ ?\([\w:]{9}\)/,''),that.usedCamera2DeviceId = vDevices[0].deviceId)
+                }
+                else
+                {
+                    that.usedCamera2 = '';
+                    that.usedCamera2DeviceId = '';
+                }
+            } catch (error) {
+                console.error(error);
+            }
+            that._destroyMediaStream(mediaStream);
+            mediaStream = null;
+        },
+        publishVideo:async function(){
+            const that = this;
+            let videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
+            let audioConstraints = [new Owt.Base.AudioTrackConstraints(Owt.Base.AudioSourceInfo.MIC),false];
+            let resolutions = [{ width: 1280, height: 720 },{ width: 640, height: 360 },undefined,false];
+            let mediaStream;
+            for (const audioConstraint of audioConstraints) {
+                for (const resolution of resolutions) {
+                    try {
+                        if(resolution === false)
+                        {
+                            videoConstraints = false;
+                        }
+                        else{
+                            videoConstraints.resolution = resolution;
+                            if(resolution == undefined) delete videoConstraints.resolution;
+                        }
                         
                         mediaStream = await Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
                             audioConstraint, videoConstraints));
@@ -339,13 +426,13 @@ const _app = new Vue({
         },
         _clearLocalCamera:function(){
             const that = this;
-            that.localStream && that.localStream.mediaStream && that.destroyMediaStream(that.localStream.mediaStream),(that.localStream = null);
+            that.localStream && that.localStream.mediaStream && that._destroyMediaStream(that.localStream.mediaStream),(that.localStream = null);
             
             that.isCameraMuted = that.isMicMuted = true;
         },
         _clearLocalCameraSecond:function(){
             const that = this;
-            that.localStreamSecond && that.localStreamSecond.mediaStream && that.destroyMediaStream(that.localStreamSecond.mediaStream),(that.localStreamSecond = null);
+            that.localStreamSecond && that.localStreamSecond.mediaStream && that._destroyMediaStream(that.localStreamSecond.mediaStream),(that.localStreamSecond = null);
             
             that.isCamera2Muted = true;
         },
@@ -384,7 +471,7 @@ const _app = new Vue({
         },
         _clearScreenShare:function(){
             const that = this;
-            that.ScreenStream && that.ScreenStream.mediaStream && (destroyMediaStream(that.ScreenStream.mediaStream)),(that.ScreenStream = null);
+            that.ScreenStream && that.ScreenStream.mediaStream && (_destroyMediaStream(that.ScreenStream.mediaStream)),(that.ScreenStream = null);
             that.publicationScreenGlobal = null;
             that.isDesktopShared = false;
         },
@@ -442,7 +529,10 @@ const _app = new Vue({
             let tracks,track;
             if(!this.localStream || !this.localStream.mediaStream)
             {
-                this.isCameraMuted = true;
+                this.isMicMuted = true;
+                this.enableAudio = true;
+                this.enableVideo = false;
+                this.publishVideo();
                 return;
             }
             tracks = this.localStream.mediaStream.getAudioTracks();
@@ -455,7 +545,8 @@ const _app = new Vue({
             if(!this.localStream || !this.localStream.mediaStream)
             {
                 this.isCameraMuted = true;
-
+                this.enableAudio = false;
+                this.enableVideo = true;
                 this.publishVideo();
                 return;
             }
@@ -468,7 +559,6 @@ const _app = new Vue({
             if(!this.publicationGlobalSecond || !this.localStreamSecond || !this.localStreamSecond.mediaStream)
             {
                 this.isCamera2Muted = true;
-
                 this.publishVideoSecond();
                 return;
             }
@@ -478,10 +568,9 @@ const _app = new Vue({
         },
         clickDesktop:function(e){
             const that = this;
-            //ipcRenderer.send('show-screen-publish', `${location.search}&streamId=${that.publicationGlobal.id}`);
             if(that.publicationScreenGlobal)
             {
-                that.ScreenStream && that.ScreenStream.mediaStream && that.destroyMediaStream(that.ScreenStream.mediaStream),(that.ScreenStream = null);
+                that.ScreenStream && that.ScreenStream.mediaStream && that._destroyMediaStream(that.ScreenStream.mediaStream),(that.ScreenStream = null);
                 that.publicationScreenGlobal.stop(),that.publicationScreenGlobal = null;
                 that.isDesktopShared = false;
                 return;
@@ -493,24 +582,35 @@ const _app = new Vue({
         clickRecord:function(e){
 
         },
-        exitRoom:function(e){
+        _exitRoom:function(e){
             const that = this;
-
             try {
                 that.publicationGlobal && that.publicationGlobal.stop(),that.publicationGlobal = null;
                 that.publicationGlobalSecond && that.publicationGlobalSecond.stop(),that.publicationGlobalSecond = null;
                 that.subscriptionGlobal && that.subscriptionGlobal.stop(),that.subscriptionGlobal = null;
                 that.publicationScreenGlobal && that.publicationScreenGlobal.stop(),that.publicationScreenGlobal = null;
-                that.mixStreamGlobal && that.mixStreamGlobal.mediaStream && that.destroyMediaStream(that.mixStreamGlobal.mediaStream),(that.mixStreamGlobal = null);
-                that.conference && that.conference.leave(),that.conference = null;
+
+                await (async function(){
+                    return new Promise(resolve =>{
+                        setTimeout(() => {
+                            that.conference && that.conference.leave(),that.conference = null;
+                            console.log('conference leave.')
+                            resolve();
+                        }, 1000);
+                    });
+                })();
+                
             } catch (_) { }
-            that.ScreenStream && that.ScreenStream.mediaStream && that.destroyMediaStream(that.ScreenStream.mediaStream),(that.ScreenStream = null);
-            that.localStream && that.localStream.mediaStream && that.destroyMediaStream(that.localStream.mediaStream),(that.localStream = null);
+
+            that.mixStreamGlobal && that.mixStreamGlobal.mediaStream && that._destroyMediaStream(that.mixStreamGlobal.mediaStream),(that.mixStreamGlobal = null);
+            that.ScreenStream && that.ScreenStream.mediaStream && that._destroyMediaStream(that.ScreenStream.mediaStream),(that.ScreenStream = null);
+            that.localStream && that.localStream.mediaStream && that._destroyMediaStream(that.localStream.mediaStream),(that.localStream = null);
             that.conference = that.publicationGlobal = that.subscriptionGlobal = null;
 
             that.playerStream = null;
+            that.statInterval && (clearInterval(that.statInterval),that.statInterval = 0);
         },
-        destroyMediaStream:function(mediaStream)
+        _destroyMediaStream:function(mediaStream)
         {
             try {
                 let audioTracks,videoTracks;
@@ -529,4 +629,4 @@ const _app = new Vue({
     }
 });
 
-window.onbeforeunload = _app.exitRoom.bind(_app);
+window.onbeforeunload = _app._exitRoom.bind(_app);
