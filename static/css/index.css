@@ -47,7 +47,7 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     left: 0;
     right: 0;
     margin: 0 auto;
-    background: #404040;
+    background-color: #404040;
     border-radius: 5px;
     box-shadow: 0px 0px 3px 0px #4f4f4f8f;
     overflow: visible;
@@ -65,8 +65,14 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
     filter: none;
 }
 
+.video-container .tools .el-dropdown,.video-container .tools .dorpdownLabel,.video-container .tools .el-menu-member{
+    width: 100%;
+    height: 100%;
+    color:white;
+}
+
 .video-container .tools > *{
-    width: 82px;
+    width: 76px;
     line-height: 1.0;
     height: 100%;
     border: none;
@@ -630,4 +636,34 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 .heisir .screen_select li img{
     width: 200px;
     height: auto;
+}
+
+.heisir .el-dropdown-menu.el-popper{
+    background-color: #404040;
+    border: 0;
+    opacity: 0.85;
+    margin: 10px;
+    color:#ffd400;
+
+}
+.heisir .el-dropdown-menu.el-popper .el-dropdown-menu__item{
+    color: white;
+}
+
+.heisir .el-dropdown-menu__item:focus,.el-dropdown-menu__item:not(.is-disabled):hover {
+    background-color:#303030 !important;
+    color: #ffd400 !important;
+}
+
+.heisir .el-dropdown-menu__item--divided:before{
+    background-color:#404040 !important;
+}
+
+.heisir .el-dropdown-menu__item--divided {
+    position: relative;
+    margin-top: 6px;
+    border-top: 1px solid #888888
+}
+.heisir .el-popper[x-placement^=top] .popper__arrow,.el-popper[x-placement^=top] .popper__arrow::after{
+    border-top-color: #404040 !important;
 }

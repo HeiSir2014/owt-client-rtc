@@ -34,25 +34,31 @@
             <video class="playRTC" v-if="playerStream" :src-object.prop.camel="playerStream" :muted="isSpeakMuted" autoplay width="100%" height="100%">
                 this browser does not supported video tag
             </video>
-            <div v-show="tools_visible" class="tools">
-                <div class="layout" @click="clickChanageLayout">
-                    <img class="label" src="icon/layout.png" />
-                    <div class="title">布局</div>
-                    <div class="layout-menu">
-                        <div>切换布局</div>
-                        <div>只看</div>
-                        <div></div>
-                    </div>
-                    <!-- <el-dropdown split-button type="primary" @click="handleClick">
-                        更多菜单
+            <div v-show="tools_visible" class="tools" @mouseover="tools_hover = true" @mouseleave="tools_hover = false">
+                <div class="member">
+                    <el-dropdown trigger="click" placement="top">
+                        <div class="dorpdownLabel">
+                            <img class="label" src="icon/members.png" />
+                        </div>
                         <el-dropdown-menu slot="dropdown">
-                            <el-dropdown-item>黄金糕</el-dropdown-item>
-                            <el-dropdown-item>狮子头</el-dropdown-item>
-                            <el-dropdown-item>螺蛳粉</el-dropdown-item>
-                            <el-dropdown-item>双皮奶</el-dropdown-item>
-                            <el-dropdown-item>蚵仔煎</el-dropdown-item>
+                            <el-dropdown-item v-for="participant in participants">{{ participant.id == myId ? "我": participant.userId }}</el-dropdown-item>
                         </el-dropdown-menu>
-                    </el-dropdown> -->
+                        <div class="title">成员({{participants.length}})</div>
+                    </el-dropdown>
+                </div>
+                <div class="layout">
+                    <el-dropdown trigger="click" placement="top" @command="clickChanageLayout">
+                        <div class="dorpdownLabel">
+                            <img class="label" src="icon/layout.png" />
+                        </div>
+                        <el-dropdown-menu slot="dropdown">
+                            <el-dropdown-item command="activeLayout" v-for="remoteStream in remoteStreams" data="remoteStream.id">置顶 {{ getStreamUserId(remoteStream) }} 的{{ convertSource(remoteStream.source.video) }}</el-dropdown-item>
+                            <!--<el-dropdown-item v-for="remoteStream in remoteStreams" data="remoteStream.id">单一显示 {{ getStreamUserId(remoteStream) }} 的{{ convertSource(remoteStream.source.video) }}</el-dropdown-item>-->
+
+                            <el-dropdown-item command="switchLayout" divided>切换布局</el-dropdown-item>
+                        </el-dropdown-menu>
+                        <div class="title">布局</div>
+                    </el-dropdown>
                 </div>
                 <div class="speak" @click="clickSpeak">
                     <img class="label" :src="isSpeakMuted?'icon/speak_no.png':'icon/speak.png'" />
@@ -86,7 +92,7 @@
                     <div class="title">结束</div>
                 </div>
             </div>
-            <div class="chat">
+            <div v-show="tools_visible || msg_input_visible" class="chat">
                 <div class="emoji_group" >
                     <el-popover v-model="emoji_visible" popper-class="emoji_popover" placement="top" width="204" trigger="click">
                         <ul >

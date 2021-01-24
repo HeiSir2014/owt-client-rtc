@@ -4,6 +4,7 @@ const fs = require('fs');
 const winston = require('winston');
 const { app, BrowserWindow, Tray, ipcMain, shell, Menu, dialog,session, webContents } = require('electron');
 const isDev = require('electron-is-dev');
+const package_self = require('./package.json');
 let mainWindow = null;
 let screenWindow = null;
 let loginRoomWindow = null;
@@ -19,15 +20,14 @@ let localConfig;
         return
     }
     app.on('second-instance', (event, argv, cwd) => {
-        if (mainWindow) {
-            if (mainWindow.isMinimized()) {
-                mainWindow.restore()
-            } else if (mainWindow.isVisible()) {
-                mainWindow.focus()
-            } else {
-                mainWindow.show()
-                mainWindow.focus()
+        const [win] = BrowserWindow.getAllWindows();
+        console.log(win)
+        if (win) {
+            if (win.isMinimized()) {
+                win.restore()
             }
+            win.show()
+            win.focus()
         } else {
             app.quit();
         }
@@ -146,6 +146,7 @@ function CreateDefaultWin(options)
     win.webContents.on('dom-ready',function(e){
         let win = BrowserWindow.fromWebContents(e.sender);
         e.sender.send('maximizeChanged', win.isFullScreen());
+        e.sender.send('set-version', package_self.version);
     });
     return win;
 }

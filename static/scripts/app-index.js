@@ -35,7 +35,10 @@ const _app = new Vue({
             screen_select_visible:false,
             lastmoveTime:0,
             autoHideIntelval:null,
-            tools_visible:true
+            tools_visible:true,
+            tools_hover:false,
+            participants:[],
+            remoteStreams:[]
         }
     },
     methods:{
@@ -43,6 +46,7 @@ const _app = new Vue({
             const that = this;
 
             ipcRenderer.on('maximizeChanged',that.maximizeChanged.bind(that));
+            ipcRenderer.on('set-version',that._setVersion.bind(that));
             window.addEventListener('keyup', that.keyup.bind(that));
             window.addEventListener('mousemove', that.mousemove.bind(that));
 
@@ -75,9 +79,13 @@ const _app = new Vue({
                     that.myId = resp.self.id;
                     that.myRoomId = resp.id;
                     
+                    that.participants = resp.participants;
+                    that.remoteStreams = resp.remoteStreams.filter(r => r.source && r.source.video && r.source.video != 'mixed');
+
                     (that.enableAudio || that.enableVideo) && that.publishVideo();
 
                     var streams = resp.remoteStreams;
+                    console.log(streams);
                     for (const stream of streams) {
                         if ((stream.source.audio === 'mixed' || stream.source.video ===
                             'mixed') && stream.id.indexOf('-presenters') != -1) {
@@ -109,6 +117,9 @@ const _app = new Vue({
                 that.statInterval = setInterval(that._getStat.bind(that), 1000);
             });
         },
+        _setVersion:function(event , version){
+            this.version = version;
+        },
         keyup:function(e){
             e.keyCode == 27 && this.isMaximized && ipcRenderer.send('setFullScreen-win',false);
             return e.keyCode != 27;
@@ -117,16 +128,15 @@ const _app = new Vue({
             if(this.autoHideIntelval == null)
             {
                 document.body.style.cursor = "default";
-                this.tools_visible =true;
-                this.autoHideIntelval = setInterval(this.autoHideCursor.bind(this), 1000);
-
+                this.tools_visible = true;
+                this.autoHideIntelval = setInterval(this.autoHideCursor.bind(this), 2000);
 
             }
             this.lastmoveTime = new Date().getTime();
             return true;
         },
         autoHideCursor:function(e){
-            if(this.lastmoveTime && new Date().getTime() - 2000 > this.lastmoveTime){
+            if(!this.tools_hover && this.lastmoveTime && new Date().getTime() - 5000 > this.lastmoveTime){
 
                 clearInterval(this.autoHideIntelval),this.autoHideIntelval = null;
                 document.body.style.cursor = "none";
@@ -205,12 +215,22 @@ const _app = new Vue({
                 console.log(`${stream.id} is updated`);
             });
         },
+        convertSource:function(streamSource){
+            const dict = {camera:"摄像头","screen-cast":"桌面"};
+            if(streamSource in dict) return dict[streamSource];
+            return '视频';
+        },
+        getStreamUserId:function(remoteStream){
+            const userId = this.participants.filter(p=> p.id == remoteStream.origin)[0].userId;
+            return userId == this.myId?userId+'(我)':userId;
+        },
         participantjoined:function(e){
             if( /robot/.test(e.participant.userId) ) return;
             console.log('participantjoined',e);
 
             e.participant.addEventListener('left',this.participantleft.bind(this,e.participant))
 
+            this.participants = this.conference.info.participants;
             console.log(this.conference.info);
             var audio = new Audio('audio/some_one_join_room.wav'); // path to file
             audio.play();
@@ -220,6 +240,7 @@ const _app = new Vue({
         participantleft:function(participant,e){
             console.log('participantleft',e);
 
+            this.participants = this.conference.info.participants;
             var audio = new Audio('audio/some_one_join_room.wav'); // path to file
             audio.play();
             audio = null;
@@ -283,6 +304,7 @@ const _app = new Vue({
             console.log('A new stream is added ', e.stream.id);
             //isSelf = isSelf?isSelf:event.stream.id != publicationGlobal.id;
             //mixStream(that.myRoomId, event.stream.id, ['common','presenters']);
+            that.remoteStreams = that.conference.info.remoteStreams.filter(r => r.source && r.source.video && r.source.video != 'mixed');
             if (e.stream.origin !== that.myId && e.stream.source
                 && e.stream.source.video
                 && e.stream.source.video == 'screen-cast') {
@@ -290,6 +312,7 @@ const _app = new Vue({
             }
             e.stream.addEventListener('ended', () => {
                 console.log(e.stream.id + ' is ended.');
+                that.remoteStreams = that.conference.info.remoteStreams.filter(r => r.source && r.source.video && r.source.video != 'mixed');
             });
         },
         checkDevices:async function(){
@@ -535,6 +558,9 @@ const _app = new Vue({
             that.bytesSentGlobal = bytesSent;
         },
         clickChanageLayout:function(e){
+            console.log(e);
+            
+            if(e != 'switchLayout') return;
             if (!this.subscriptionGlobal) return;
             const layouts = [
                 [{ "region": [{ "id": "1", "area": { "height": "1", "width": "1", "top": "0", "left": "0" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "1/4", "width": "1/4", "top": "3/4", "left": "3/4" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1279/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "539/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1279/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1439/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "269/1080", "width": "479/1920", "top": "0", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "268/1080", "width": "479/1920", "top": "271/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "268/1080", "width": "479/1920", "top": "541/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "1441/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "719/1080", "width": "1279/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "358/1080", "width": "639/1920", "top": "721/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "0" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "809/1080", "width": "1439/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "269/1080", "width": "479/1920", "top": "0", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "268/1080", "width": "479/1920", "top": "281/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "268/1080", "width": "479/1920", "top": "541/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "268/1080", "width": "479/1920", "top": "811/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "961/1920" }, "shape": "rectangle" }, { "id": "7", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "481/1920" }, "shape": "rectangle" }, { "id": "8", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "0" }, "shape": "rectangle" }] }],
@@ -619,18 +645,11 @@ const _app = new Vue({
                 that.publicationGlobalSecond && that.publicationGlobalSecond.stop(),that.publicationGlobalSecond = null;
                 that.subscriptionGlobal && that.subscriptionGlobal.stop(),that.subscriptionGlobal = null;
                 that.publicationScreenGlobal && that.publicationScreenGlobal.stop(),that.publicationScreenGlobal = null;
-
-                await (async function(){
-                    return new Promise(resolve =>{
-                        setTimeout(() => {
-                            that.conference && that.conference.leave(),that.conference = null;
-                            console.log('conference leave.')
-                            resolve();
-                        }, 1000);
-                    });
-                })();
-                
             } catch (_) { }
+
+            try {
+                that.conference && that.conference.leave(),that.conference = null;
+            } catch (_) {}
 
             that.mixStreamGlobal && that.mixStreamGlobal.mediaStream && that._destroyMediaStream(that.mixStreamGlobal.mediaStream),(that.mixStreamGlobal = null);
             that.ScreenStream && that.ScreenStream.mediaStream && that._destroyMediaStream(that.ScreenStream.mediaStream),(that.ScreenStream = null);
