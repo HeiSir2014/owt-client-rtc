@@ -41,7 +41,7 @@
                             <img class="label" src="icon/members.png" />
                         </div>
                         <el-dropdown-menu slot="dropdown">
-                            <el-dropdown-item v-for="participant in participants">{{ participant.id == myId ? "我": participant.userId }}</el-dropdown-item>
+                            <el-dropdown-item v-for="participant in participants">{{ participant.userId + (participant.id == myId ? "(我)":"") }}</el-dropdown-item>
                         </el-dropdown-menu>
                         <div class="title">成员({{participants.length}})</div>
                     </el-dropdown>
