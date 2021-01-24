@@ -4,24 +4,23 @@
 
 ## 特性
 
-- PC跨平台支持
-- 低延时多人互动
+- PC多平台支持（Windows、Linux、MacOS）
+- 视频聊天
+- 文字聊天
+- 多摄像头支持
 - 桌面分享
 - 本地录制
 
 ## UI
 <div align="center">
 	<br>
-	<img style="width:100%" src="https://github.com/HeiSir2014/owt-client-rtc/blob/main/static/imgs/ui-03.png?raw=true" alt="OWT Client">
+	<img style="width:100%;max-width:640px" src="https://github.com/HeiSir2014/owt-client-rtc/blob/main/static/imgs/ui-04.gif?raw=true" alt="OWT Client">
 	<br>
-	<img style="width:100%" src="https://github.com/HeiSir2014/owt-client-rtc/blob/main/static/imgs/ui-01.png?raw=true" alt="OWT Client">
-	<br>
-	<img style="width:100%" src="https://github.com/HeiSir2014/owt-client-rtc/blob/main/static/imgs/ui-02.png?raw=true" alt="OWT Client">
 </div>
 
 ## 下载
 
-[Download Release](https://github.com/HeiSir2014/owt-client-rtc/releases/)
+[Release](https://github.com/HeiSir2014/owt-client-rtc/releases/)
 
 ## 开发
 
@@ -32,3 +31,8 @@ git clone https://github.com/HeiSir2014/owt-client-rtc.git .
 npm install
 npm run start
 ```
+
+## 交流学习
+
+QQ群：213941700
+
