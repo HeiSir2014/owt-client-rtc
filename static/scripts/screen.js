@@ -5,7 +5,6 @@ window.onload = function() {
     const pc = new RTCPeerConnection();
     ipcRenderer.on('set-remote-stream',async function(event,remoteDesc){
         await pc.setRemoteDescription(remoteDesc);
-        //const answer = await pc.createAnswer()
         await pc.setLocalDescription();
         const localDesc = pc.localDescription;
         ipcRenderer.send('set-remote-desc',remoteDesc,localDesc.toJSON());
@@ -28,7 +27,7 @@ window.onload = function() {
         });
     }
     pc.onconnectionstatechange = ()=>{
-        pc.connectionState == 'closed' && close.click();
+        pc.connectionState == 'closed'||pc.connectionState == 'failed' && close.click();
     }
 
     close.onclick = () => {

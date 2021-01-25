@@ -312,7 +312,20 @@ const _app = new Vue({
             if (e.stream.origin !== that.myId && e.stream.source
                 && e.stream.source.video
                 && e.stream.source.video == 'screen-cast') {
-                ipcRenderer.send('show-screen', `${location.search}&streamId=${e.stream.id}`);
+                    
+                if(!that.conference) return;
+                that.conference.subscribe(e.stream, {
+                    audio: e.stream.source.audio ? true : false,
+                    video: {
+                        codecs:[{ name: "h264", profile: "CB" }],
+                        resolutions:[e.stream.settings.video[0].resolution],
+                        bitrateMultipliers:[1.0]
+                    }
+                }).then((subscription) => {
+                    that.showScreenStream(e.stream.mediaStream);
+                }, (err) => {
+                    console.log('subscribe failed', err);
+                });
             }
             e.stream.addEventListener('ended', () => {
                 console.log(e.stream.id + ' is ended.');
@@ -532,7 +545,6 @@ const _app = new Vue({
             this.peerConnectionScreen = new RTCPeerConnection();
             stream.getTracks().forEach(track => this.peerConnectionScreen.addTransceiver(track, {streams: [stream], direction: 'sendonly'}));
             stream.onremovetrack = this.showStreamEnded.bind(this,this.peerConnectionScreen,stream);
-            //const offer = await this.peerConnectionScreen.createOffer()
             this.peerConnectionScreen.onicecandidate = function({candidate}){
                 candidate && ipcRenderer.send('set-icecandidate', candidate.toJSON());
             }
@@ -540,7 +552,7 @@ const _app = new Vue({
                 await that.peerConnectionScreen.setLocalDescription();
                 const localDesc = that.peerConnectionScreen.localDescription;
                 console.log( that.peerConnectionScreen.localDescription );
-                ipcRenderer.send('show-screen-publish', `${location.search}`, localDesc.toJSON() );
+                ipcRenderer.send('show-screen', `${location.search}`, localDesc.toJSON());
             }
             this.peerConnectionScreen.oniceconnectionstatechange = (e)=>{console.log("oniceconnectionstatechange",e)}
         },
@@ -551,10 +563,10 @@ const _app = new Vue({
         _setIcecandidate:async function(e, candidate){
             candidate && await this.peerConnectionScreen.addIceCandidate(candidate);
         },
-        showStreamEnded:function(e,pc,stream){
-            stream && stream.getTracks().forEach(track=> pc.removeTrack(track));
+        showStreamEnded:function(track,pc,stream){
+            track && pc.removeTrack(track);
             pc && pc.close();
-            console.log("showStreamEnded",e,pc,stream);
+            console.log("showStreamEnded",track,pc,stream);
         },
         _clearScreenShare:function(){
             const that = this;
