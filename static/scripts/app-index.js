@@ -220,9 +220,12 @@ const _app = new Vue({
             if(streamSource in dict) return dict[streamSource];
             return '视频';
         },
+        getUserIdFromOrigin:function(origin){
+            const userId = this.participants.filter(p=> p.id == origin)[0].userId;
+            return userId == this.myId?userId + '(我)': userId;
+        },
         getStreamUserId:function(remoteStream){
-            const userId = this.participants.filter(p=> p.id == remoteStream.origin)[0].userId;
-            return userId == this.myId?userId+'(我)':userId;
+            return this.getUserIdFromOrigin(remoteStream.origin);
         },
         participantjoined:function(e){
             if( /robot/.test(e.participant.userId) ) return;
@@ -252,10 +255,8 @@ const _app = new Vue({
             if(e.origin == this.myId) return;
             if(e.message.type == 'msg_text' || e.message.type == 'msg_emoji')
             {
-                this.showMessage(e.origin, e.message);
+                this.showMessage( this.getUserIdFromOrigin(e.origin) , e.message);
             }
-
-            
         },
         showMessage:function(userId, message){
             const duration = 8888;

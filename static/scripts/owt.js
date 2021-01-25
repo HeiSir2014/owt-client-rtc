@@ -10,7 +10,7 @@
     
     var c = a.value;
     
-    c.maxBitrate && (e = i(e, c.codec.name, "x-google-max-bitrate", c.maxBitrate.toString())) && (e = i(e, c.codec.name, "x-google-start-bitrate", c.maxBitrate.toString()));
+    c.maxBitrate && (e = i(e, c.codec.name, "x-google-max-bitrate", c.maxBitrate.toString())) && (e = i(e, c.codec.name, "x-google-start-bitrate", (c.maxBitrate/2).toString())) && (e = i(e, c.codec.name, "x-google-min-bitrate", (c.maxBitrate/4).toString()));
 
     c.maxBitrate && (e=e.replace('a=mid:1\r\n',`a=mid:1\r\nb=AS:${c.maxBitrate.toString()}\r\n`));/**/
     //console.log(e);
