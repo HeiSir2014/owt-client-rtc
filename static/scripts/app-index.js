@@ -39,9 +39,7 @@ const _app = new Vue({
             tools_hover:false,
             participants:[],
             remoteStreams:[],
-            peerConnectionScreen:null,
-            peercandidates:[],
-            peerRemotecandidates:[]
+            peerConnectionScreen: null,
         }
     },
     methods:{
@@ -532,30 +530,31 @@ const _app = new Vue({
         showScreenStream:async function(stream){
             const that = this;
             this.peerConnectionScreen = new RTCPeerConnection();
-            stream.getTracks().forEach(track => this.peerConnectionScreen.addTrack(track, stream));
-            stream.addEventListener('ended',this.showStreamEnded.bind(this,this.peerConnectionScreen));
-            const offer = await this.peerConnectionScreen.createOffer()
-            await this.peerConnectionScreen.setLocalDescription(offer);
-            const localDesc = this.peerConnectionScreen.localDescription;
-            console.log( this.peerConnectionScreen.localDescription );
+            stream.getTracks().forEach(track => this.peerConnectionScreen.addTransceiver(track, {streams: [stream], direction: 'sendonly'}));
+            stream.onremovetrack = this.showStreamEnded.bind(this,this.peerConnectionScreen,stream);
+            //const offer = await this.peerConnectionScreen.createOffer()
             this.peerConnectionScreen.onicecandidate = function({candidate}){
-                candidate && that.peercandidates.push(candidate.toJSON());
+                candidate && ipcRenderer.send('set-icecandidate', candidate.toJSON());
             }
-            ipcRenderer.send('show-screen-publish', `${location.search}`, localDesc.toJSON() );
+            this.peerConnectionScreen.onnegotiationneeded = async () => {
+                await that.peerConnectionScreen.setLocalDescription();
+                const localDesc = that.peerConnectionScreen.localDescription;
+                console.log( that.peerConnectionScreen.localDescription );
+                ipcRenderer.send('show-screen-publish', `${location.search}`, localDesc.toJSON() );
+            }
+            this.peerConnectionScreen.oniceconnectionstatechange = (e)=>{console.log("oniceconnectionstatechange",e)}
         },
         _setRemoteDesc:async function(e,localDesc,remoteDesc){
             console.log("_setRemoteDesc",localDesc,remoteDesc)
             this.peerConnectionScreen && await this.peerConnectionScreen.setRemoteDescription(remoteDesc);
-            ipcRenderer.send('set-icecandidate', this.peercandidates );
-
-            this.peerRemotecandidates.forEach(candidate =>{this.peerConnectionScreen.addIceCandidate(candidate)})
         },
-        _setIcecandidate:function(e,candidate){
-
-            this.peerRemotecandidates && this.peerRemotecandidates.push(candidate) && this.peerConnectionScreen.addIceCandidate(candidate);
+        _setIcecandidate:async function(e, candidate){
+            candidate && await this.peerConnectionScreen.addIceCandidate(candidate);
         },
-        showStreamEnded:function(e,pc){
-            console.log("showStreamEnded",e,pc);
+        showStreamEnded:function(e,pc,stream){
+            stream && stream.getTracks().forEach(track=> pc.removeTrack(track));
+            pc && pc.close();
+            console.log("showStreamEnded",e,pc,stream);
         },
         _clearScreenShare:function(){
             const that = this;
