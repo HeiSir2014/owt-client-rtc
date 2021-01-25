@@ -79,7 +79,7 @@ const _app = new Vue({
                     that.myId = resp.self.id;
                     that.myRoomId = resp.id;
                     
-                    that.participants = resp.participants;
+                    that.participants = resp.participants.filter(p => !/robot/.test(p.userId) );
                     that.remoteStreams = resp.remoteStreams.filter(r => r.source && r.source.video && r.source.video != 'mixed');
 
                     (that.enableAudio || that.enableVideo) && that.publishVideo();
@@ -233,7 +233,7 @@ const _app = new Vue({
 
             e.participant.addEventListener('left',this.participantleft.bind(this,e.participant))
 
-            this.participants = this.conference.info.participants;
+            this.participants = this.conference.info.participants.filter(p => !/robot/.test(p.userId) );
             console.log(this.conference.info);
             var audio = new Audio('audio/some_one_join_room.wav'); // path to file
             audio.play();
@@ -243,7 +243,7 @@ const _app = new Vue({
         participantleft:function(participant,e){
             console.log('participantleft',e);
 
-            this.participants = this.conference.info.participants;
+            this.participants = this.conference.info.participants.filter(p => !/robot/.test(p.userId) );
             var audio = new Audio('audio/some_one_join_room.wav'); // path to file
             audio.play();
             audio = null;
