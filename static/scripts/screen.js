@@ -57,6 +57,49 @@ const runSocketIOSample = function() {
     }
 
     window.onload = function() {
+
+        ipcRenderer.on('set-remote-stream',async function(event,remoteDesc){
+            console.log(remoteDesc)
+
+            const pc = new RTCPeerConnection();
+            
+            ipcRenderer.on('set-icecandidate',function(event,candidates){
+                console.log(candidates);
+                candidates.forEach(candidate => {
+                    pc.addIceCandidate(candidate);
+                });
+            });
+            await pc.setRemoteDescription(remoteDesc);
+            const answer = await pc.createAnswer()
+            await pc.setLocalDescription(answer);
+            const localDesc = pc.localDescription;
+            pc.onicecandidate = function({candidate})
+            {
+                candidate && ipcRenderer.send('set-icecandidate-remote',candidate.toJSON());
+            }
+            pc.ontrack = function(e){
+                console.log("ontrack",e);
+                let v = document.querySelector('.video-container .playRTC');
+                v && (v.srcObject = e.streams[0]);
+            }
+            ipcRenderer.send('set-remote-desc',remoteDesc,localDesc.toJSON());
+        })
+        let close = document.querySelector('.systools .close');
+        close.onclick = () => {
+            try {
+                conference && (conference.leave());
+                publicationGlobal && publicationGlobal.stop();
+                subscirptionGlobal && subscirptionGlobal.stop();
+            } catch (_) {
+                
+            }
+            conference = publicationGlobal = subscirptionGlobal = null;
+            let v = document.querySelector('.video-container .playRTC');
+            v && (v.srcObject = null);
+            ipcRenderer.send("close-win");
+        };
+        return;
+
         myRoom = getParameterByName('room');
         myUserId = 'robot';
         myUserNick = '';
@@ -76,20 +119,7 @@ const runSocketIOSample = function() {
             });
         });
 
-        let close = document.querySelector('.systools .close');
-        close.onclick = () => {
-            try {
-                conference && (conference.leave());
-                publicationGlobal && publicationGlobal.stop();
-                subscirptionGlobal && subscirptionGlobal.stop();
-            } catch (_) {
-                
-            }
-            conference = publicationGlobal = subscirptionGlobal = null;
-            let v = document.querySelector('.video-container .playRTC');
-            v && (v.srcObject = null);
-            ipcRenderer.send("close-win");
-        };
+        
 
         
         let screenScale = document.querySelector('.tools .screen-scale');
@@ -119,6 +149,7 @@ const runSocketIOSample = function() {
     };
 };
 window.onbeforeunload = function(event){
+    return;
     conference && conference.leave();
     publicationGlobal && publicationGlobal.stop();
     subscirptionGlobal && subscirptionGlobal.stop();

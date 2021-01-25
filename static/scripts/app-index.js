@@ -38,7 +38,10 @@ const _app = new Vue({
             tools_visible:true,
             tools_hover:false,
             participants:[],
-            remoteStreams:[]
+            remoteStreams:[],
+            peerConnectionScreen:null,
+            peercandidates:[],
+            peerRemotecandidates:[]
         }
     },
     methods:{
@@ -47,6 +50,8 @@ const _app = new Vue({
 
             ipcRenderer.on('maximizeChanged',that.maximizeChanged.bind(that));
             ipcRenderer.on('set-version',that._setVersion.bind(that));
+            ipcRenderer.on('set-remote-desc',that._setRemoteDesc.bind(that));
+            ipcRenderer.on('set-icecandidate-remote',that._setIcecandidate.bind(that));
             window.addEventListener('keyup', that.keyup.bind(that));
             window.addEventListener('mousemove', that.mousemove.bind(that));
 
@@ -517,11 +522,40 @@ const _app = new Vue({
                 mixStream(that.myRoomId, publication.id, ['common']);
                 publication.addEventListener('error', that._clearScreenShare.bind(that));
                 publication.addEventListener('end', that._clearScreenShare.bind(that));
-                ipcRenderer.send('show-screen-publish', `${location.search}&streamId=${publication.id}`);
-
+                
+                that.showScreenStream(mediaStream);
+                
             }, err => {
                 that._clearScreenShare();
             })
+        },
+        showScreenStream:async function(stream){
+            const that = this;
+            this.peerConnectionScreen = new RTCPeerConnection();
+            stream.getTracks().forEach(track => this.peerConnectionScreen.addTrack(track, stream));
+            stream.addEventListener('ended',this.showStreamEnded.bind(this,this.peerConnectionScreen));
+            const offer = await this.peerConnectionScreen.createOffer()
+            await this.peerConnectionScreen.setLocalDescription(offer);
+            const localDesc = this.peerConnectionScreen.localDescription;
+            console.log( this.peerConnectionScreen.localDescription );
+            this.peerConnectionScreen.onicecandidate = function({candidate}){
+                candidate && that.peercandidates.push(candidate.toJSON());
+            }
+            ipcRenderer.send('show-screen-publish', `${location.search}`, localDesc.toJSON() );
+        },
+        _setRemoteDesc:async function(e,localDesc,remoteDesc){
+            console.log("_setRemoteDesc",localDesc,remoteDesc)
+            this.peerConnectionScreen && await this.peerConnectionScreen.setRemoteDescription(remoteDesc);
+            ipcRenderer.send('set-icecandidate', this.peercandidates );
+
+            this.peerRemotecandidates.forEach(candidate =>{this.peerConnectionScreen.addIceCandidate(candidate)})
+        },
+        _setIcecandidate:function(e,candidate){
+
+            this.peerRemotecandidates && this.peerRemotecandidates.push(candidate) && this.peerConnectionScreen.addIceCandidate(candidate);
+        },
+        showStreamEnded:function(e,pc){
+            console.log("showStreamEnded",e,pc);
         },
         _clearScreenShare:function(){
             const that = this;

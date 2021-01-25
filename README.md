@@ -1,6 +1,8 @@
 # OWT Client [直接下载](#下载)
 
-多人互动即时通讯Web版 和 Electron跨平台版客户端，服务器程序使用的OWT-Server [Open WebRTC Toolkit](https://github.com/open-webrtc-toolkit/)
+服务器程序使用的OWT-Server [Open WebRTC Toolkit](https://github.com/open-webrtc-toolkit/)
+
+OWT-Client 是基于OWT、Electron开发的视频会议客户端，支持Windows、Linux、MacOS系统。
 
 ## 特性
 

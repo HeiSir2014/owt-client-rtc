@@ -192,6 +192,28 @@ function ipcMessageFun(e,channel,...theArgs){
         screenWindow.on('closed',()=>{
             screenWindow = null;
         });
+        
+        const stream = theArgs.length >= 2 ? theArgs[1] : null;
+        screenWindow.webContents.on('dom-ready',function(e){
+            e.sender.send('set-remote-stream', stream);
+        });
+        return;
+    }
+
+    if(channel == "set-icecandidate" && screenWindow)
+    {
+        screenWindow.webContents.send("set-icecandidate",...theArgs);
+        return;
+    }
+    if(channel == "set-icecandidate-remote" && screenWindow && mainWindow)
+    {
+        mainWindow.webContents.send("set-icecandidate-remote",...theArgs);
+        return;
+    }
+
+    if(channel == "set-remote-desc" && screenWindow && mainWindow)
+    {
+        mainWindow.webContents.send("set-remote-desc",...theArgs);
         return;
     }
 
