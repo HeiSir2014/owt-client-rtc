@@ -15,7 +15,7 @@ let localConfig;
 (function(){
 
     // 单例应用程序
-    if (!app.requestSingleInstanceLock()) {
+    if (false && !app.requestSingleInstanceLock()) {
         app.quit()
         return
     }

@@ -202,7 +202,7 @@ const _app = new Vue({
 
                 that.isSpeakMuted = false;
 
-                that.showScreenStream(stream);
+                //that.showScreenStream(stream);
             }, (err) => {
                 that.playerStream = null;
                 that.mixStreamGlobal = null;
@@ -306,14 +306,11 @@ const _app = new Vue({
         streamadded:function(e){
             const that = this;
             console.log('A new stream is added ', e.stream.id);
-            //isSelf = isSelf?isSelf:event.stream.id != publicationGlobal.id;
-            //mixStream(that.myRoomId, event.stream.id, ['common','presenters']);
             that.remoteStreams = that.conference.info.remoteStreams.filter(r => r.source && r.source.video && r.source.video != 'mixed');
             if (e.stream.origin !== that.myId && e.stream.source
                 && e.stream.source.video
                 && e.stream.source.video == 'screen-cast') {
                     
-                if(!that.conference) return;
                 that.conference.subscribe(e.stream, {
                     audio: e.stream.source.audio ? true : false,
                     video: {
@@ -568,6 +565,8 @@ const _app = new Vue({
         showStreamEnded:function(pc, webContentsId) {
             console.log("showStreamEnded",pc);
             pc && pc.close();
+
+            ipcRenderer.sendTo(webContentsId ,'stream_ended');
         },
         _clearScreenShare:function(){
             const that = this;

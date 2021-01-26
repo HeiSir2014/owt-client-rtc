@@ -23,6 +23,7 @@ const _app = new Vue({
 
             ipcRenderer.on('maximizeChanged',that.maximizeChanged.bind(that));
             ipcRenderer.on('set-version', that._setVersion.bind(that) );
+            ipcRenderer.on('stream_ended', that.clickClose.bind(that) );
             window.addEventListener('keyup', that.onkeyup.bind(that));
             window.addEventListener('mousemove', that.onmousemove.bind(that));
 
@@ -34,7 +35,9 @@ const _app = new Vue({
             }
         
             pc.ontrack = function(e) {
-                that.playerStream != e.streams[0] && (that.playerStream = e.streams[0],
+                console.log(e);
+                
+                that.playerStream = null, (that.playerStream = e.streams[0],
                      that.playerStream.onremovetrack = that._removeTrack.bind(that) )
             }
 
@@ -107,6 +110,7 @@ const _app = new Vue({
             ipcRenderer.send('setFullScreen-win',false);
         },
         clickClose:function(e){
+            this.playerStream = null;
             ipcRenderer.send("close-win");
         },
         clickMinimize:function(e){
