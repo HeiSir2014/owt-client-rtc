@@ -10,7 +10,7 @@ const _app = new Vue({
     el: '#App',
     data:function(){
         return {
-            version:'1.0.2',
+            version:'',
             isMaximized:false,
             myRoom:'',
             statUpload:0,
@@ -33,8 +33,8 @@ const _app = new Vue({
             emoji_data:['emoji_5','emoji_6','emoji_7','emoji_4','emoji_0','emoji_1','emoji_2','emoji_3'],
             screen_data:[],
             screen_select_visible:false,
-            lastmoveTime:0,
-            autoHideIntelval:null,
+            lastMoveTime:0,
+            hideCursorIntervalHandle:null,
             tools_visible:true,
             tools_hover:false,
             participants:[],
@@ -48,10 +48,8 @@ const _app = new Vue({
 
             ipcRenderer.on('maximizeChanged',that.maximizeChanged.bind(that));
             ipcRenderer.on('set-version',that._setVersion.bind(that));
-            ipcRenderer.on('set-remote-desc',that._setRemoteDesc.bind(that));
-            ipcRenderer.on('set-icecandidate-remote',that._setIcecandidate.bind(that));
-            window.addEventListener('keyup', that.keyup.bind(that));
-            window.addEventListener('mousemove', that.mousemove.bind(that));
+            window.addEventListener('keyup', that.onkeyup.bind(that));
+            window.addEventListener('mousemove', that.onmousemove.bind(that));
 
             that.myRoom = getParameterByName('room');
             that.myUserId = getParameterByName('userId');
@@ -97,7 +95,7 @@ const _app = new Vue({
                         else if (stream.origin !== that.myId && stream.source
                             && stream.source.video
                             && stream.source.video == 'screen-cast') {
-                            ipcRenderer.send('show-screen', `${location.search}&streamId=${stream.id}`);
+                            //ipcRenderer.send('show-screen', `${location.search}&streamId=${stream.id}`);
                         }
                     }
                     var participants = resp.participants;
@@ -123,25 +121,25 @@ const _app = new Vue({
         _setVersion:function(event , version){
             this.version = version;
         },
-        keyup:function(e){
+        onkeyup:function(e){
             e.keyCode == 27 && this.isMaximized && ipcRenderer.send('setFullScreen-win',false);
             return e.keyCode != 27;
         },
-        mousemove:function(e){
-            if(this.autoHideIntelval == null)
+        onmousemove:function(e){
+            if(this.hideCursorIntervalHandle == null)
             {
                 document.body.style.cursor = "default";
                 this.tools_visible = true;
-                this.autoHideIntelval = setInterval(this.autoHideCursor.bind(this), 2000);
+                this.hideCursorIntervalHandle = setInterval(this.hideCursorInterval.bind(this), 2000);
 
             }
-            this.lastmoveTime = new Date().getTime();
+            this.lastMoveTime = Date.now();
             return true;
         },
-        autoHideCursor:function(e){
-            if(!this.tools_hover && this.lastmoveTime && new Date().getTime() - 5000 > this.lastmoveTime){
+        hideCursorInterval:function(){
+            if(!this.tools_hover && this.lastMoveTime && Date.now() - 5000 > this.lastMoveTime){
 
-                clearInterval(this.autoHideIntelval),this.autoHideIntelval = null;
+                clearInterval(this.hideCursorIntervalHandle),this.hideCursorIntervalHandle = null;
                 document.body.style.cursor = "none";
                 this.tools_visible = false;
             }
@@ -203,6 +201,8 @@ const _app = new Vue({
                 that.playerStream = stream.mediaStream;
 
                 that.isSpeakMuted = false;
+
+                that.showScreenStream(stream);
             }, (err) => {
                 that.playerStream = null;
                 that.mixStreamGlobal = null;
@@ -321,8 +321,8 @@ const _app = new Vue({
                         resolutions:[e.stream.settings.video[0].resolution],
                         bitrateMultipliers:[1.0]
                     }
-                }).then((subscription) => {
-                    that.showScreenStream(e.stream.mediaStream);
+                }).then( (subscription) => {
+                    that.showScreenStream(e.stream);
                 }, (err) => {
                     console.log('subscribe failed', err);
                 });
@@ -456,7 +456,7 @@ const _app = new Vue({
                 return;
             mixStream(that.myRoomId, that.publicationGlobal.id, ['common', 'presenters']);
             that.publicationGlobal.addEventListener('error',that._clearLocalCamera.bind(that));
-            that.publicationGlobal.addEventListener('end',  that._clearLocalCamera.bind(that));
+            that.publicationGlobal.addEventListener('ended',  that._clearLocalCamera.bind(that));
         },
         publishVideoSecond:async function(){
             const that = this;
@@ -492,7 +492,7 @@ const _app = new Vue({
                 return;
             mixStream(that.myRoomId, that.publicationGlobalSecond.id, ['common', 'presenters']);
             that.publicationGlobalSecond.addEventListener('error',that._clearLocalCameraSecond.bind(that));
-            that.publicationGlobalSecond.addEventListener('end',  that._clearLocalCameraSecond.bind(that));
+            that.publicationGlobalSecond.addEventListener('ended',  that._clearLocalCameraSecond.bind(that));
         },
         _clearLocalCamera:function(){
             const that = this;
@@ -532,45 +532,46 @@ const _app = new Vue({
 
                 mixStream(that.myRoomId, publication.id, ['common']);
                 publication.addEventListener('error', that._clearScreenShare.bind(that));
-                publication.addEventListener('end', that._clearScreenShare.bind(that));
+                publication.addEventListener('ended', that._clearScreenShare.bind(that));
                 
-                that.showScreenStream(mediaStream);
+                that.showScreenStream(that.ScreenStream);
                 
             }, err => {
                 that._clearScreenShare();
             })
         },
-        showScreenStream:async function(stream){
+        showScreenStream:function(stream){
             const that = this;
-            this.peerConnectionScreen = new RTCPeerConnection();
-            stream.getTracks().forEach(track => this.peerConnectionScreen.addTransceiver(track, {streams: [stream], direction: 'sendonly'}));
-            stream.onremovetrack = this.showStreamEnded.bind(this,this.peerConnectionScreen,stream);
-            this.peerConnectionScreen.onicecandidate = function({candidate}){
-                candidate && ipcRenderer.send('set-icecandidate', candidate.toJSON());
+            const { webContentsId } = ipcRenderer.sendSync('create-video-windows');
+            ipcRenderer.on('win-onload', this._onLoadWindow.bind(this, webContentsId, stream));
+        },
+        _onLoadWindow:async function(webContentsId, stream, e){
+            if(e.senderId != webContentsId) return;
+            const pc = new RTCPeerConnection();
+            stream.mediaStream.getTracks().forEach(track => pc.addTransceiver(track, {streams: [stream.mediaStream], direction: 'sendonly'}));
+            stream.addEventListener('ended',this.showStreamEnded.bind(this, pc , webContentsId));
+            pc.onicecandidate = function({candidate}){
+                candidate && ipcRenderer.sendTo( webContentsId ,'set-peer-param', { candidate: candidate.toJSON() } );
             }
-            this.peerConnectionScreen.onnegotiationneeded = async () => {
-                await that.peerConnectionScreen.setLocalDescription();
-                const localDesc = that.peerConnectionScreen.localDescription;
-                console.log( that.peerConnectionScreen.localDescription );
-                ipcRenderer.send('show-screen', `${location.search}`, localDesc.toJSON());
+            pc.onnegotiationneeded = async () => {
+                await pc.setLocalDescription();
+                ipcRenderer.sendTo(webContentsId ,'set-peer-param', { localDescription: pc.localDescription.toJSON() } );
             }
-            this.peerConnectionScreen.oniceconnectionstatechange = (e)=>{console.log("oniceconnectionstatechange",e)}
+            pc.oniceconnectionstatechange = (e)=>{ console.log("oniceconnectionstatechange",e ) }
+            ipcRenderer.on('set-peer-param', this._setPeerParam.bind(this, pc , webContentsId));
         },
-        _setRemoteDesc:async function(e,localDesc,remoteDesc){
-            console.log("_setRemoteDesc",localDesc,remoteDesc)
-            this.peerConnectionScreen && await this.peerConnectionScreen.setRemoteDescription(remoteDesc);
+        _setPeerParam:async function( peerConnection, webContentsId, e ,{ localDescription , candidate } ){
+            if( e.senderId != webContentsId ) return;
+            peerConnection && localDescription && await peerConnection.setRemoteDescription(localDescription);
+            peerConnection && candidate && await peerConnection.addIceCandidate(candidate);
         },
-        _setIcecandidate:async function(e, candidate){
-            candidate && await this.peerConnectionScreen.addIceCandidate(candidate);
-        },
-        showStreamEnded:function(track,pc,stream){
-            track && pc.removeTrack(track);
+        showStreamEnded:function(pc, webContentsId) {
+            console.log("showStreamEnded",pc);
             pc && pc.close();
-            console.log("showStreamEnded",track,pc,stream);
         },
         _clearScreenShare:function(){
             const that = this;
-            that.ScreenStream && that.ScreenStream.mediaStream && (_destroyMediaStream(that.ScreenStream.mediaStream)),(that.ScreenStream = null);
+            that.ScreenStream && that.ScreenStream.mediaStream && (that.ScreenStream.dispatchEvent({type:'ended'}),that._destroyMediaStream(that.ScreenStream.mediaStream)),(that.ScreenStream = null);
             that.publicationScreenGlobal = null;
             that.isDesktopShared = false;
         },
@@ -672,9 +673,7 @@ const _app = new Vue({
             const that = this;
             if(that.publicationScreenGlobal)
             {
-                that.ScreenStream && that.ScreenStream.mediaStream && that._destroyMediaStream(that.ScreenStream.mediaStream),(that.ScreenStream = null);
-                that.publicationScreenGlobal.stop(),that.publicationScreenGlobal = null;
-                that.isDesktopShared = false;
+                that._clearScreenShare();
                 return;
             }
             that.screen_data=[];
@@ -705,17 +704,15 @@ const _app = new Vue({
             that.playerStream = null;
             that.statInterval && (clearInterval(that.statInterval),that.statInterval = 0);
         },
-        _destroyMediaStream:function(mediaStream)
-        {
+        _destroyMediaStream:function(mediaStream){
+            if( !mediaStream ) return
             try {
-                let audioTracks,videoTracks;
-                mediaStream && (audioTracks = mediaStream.getAudioTracks()),
-                mediaStream && (videoTracks = mediaStream.getVideoTracks()),
-                audioTracks && (audioTracks.forEach(t=>{ t.stop(); mediaStream.removeTrack(t);})),
-                videoTracks && (videoTracks.forEach(t=>{ t.stop(); mediaStream.removeTrack(t);})),
-                (mediaStream = null);
+                mediaStream.getTracks().forEach(t=>{ t.stop(); mediaStream.removeTrack(t);}),mediaStream = null;
             } catch (err) {
                 console.error(err);
+            }
+            finally {
+                mediaStream = null;
             }
         }
     },

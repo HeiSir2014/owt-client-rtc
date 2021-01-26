@@ -6,7 +6,7 @@ const { app, BrowserWindow, Tray, ipcMain, shell, Menu, dialog,session, webConte
 const isDev = require('electron-is-dev');
 const package_self = require('./package.json');
 let mainWindow = null;
-let screenWindow = null;
+let videoWindows = [];
 let loginRoomWindow = null;
 let logger;
 let localConfig;
@@ -69,19 +69,7 @@ let localConfig;
         }
         else
         {
-            mainWindow = CreateDefaultWin();
-            mainWindow.loadFile( path.join(__dirname, 'static/index.html'),{ query:param });
-            mainWindow.on('closed', () => {
-                mainWindow = null;
-            });
-            
-            mainWindow.once('ready-to-show',()=>{
-                mainWindow.focus();
-                mainWindow.moveTop();
-                //mainWindow.maximize();
-                mainWindow.setFullScreen(true);
-
-            });
+            CreateMainWin(param);
         }
     });
 })();
@@ -105,6 +93,25 @@ function getStartParam()
         }
     });
     return param;
+}
+
+function CreateMainWin(param)
+{
+    mainWindow = CreateDefaultWin();
+    mainWindow.loadFile( path.join(__dirname, 'static/index.html'),{ query:param });
+    mainWindow.on('closed', () => {
+        mainWindow = null;
+        BrowserWindow.getAllWindows().forEach(window => {
+            isDev && window.webContents.closeDevTools()
+            window.close();
+        })
+    });
+    
+    mainWindow.once('ready-to-show',()=>{
+        mainWindow.focus();
+        mainWindow.moveTop();
+        mainWindow.setAspectRatio(16.0/9.0);
+    });
 }
 
 function CreateDefaultWin(options)
@@ -137,6 +144,7 @@ function CreateDefaultWin(options)
     isDev && win.webContents.openDevTools();
     //win.openDevTools();
     win.webContents.on('ipc-message',ipcMessageFun);
+    win.webContents.on('ipc-message-sync',ipcMessageFun);
     win.on('enter-full-screen',fullScreenChanged);
     win.on('leave-full-screen',fullScreenChanged);
     win.webContents.on('new-window', function(event, url, frameName, disposition, options){
@@ -182,41 +190,14 @@ function ipcMessageFun(e,channel,...theArgs){
         return;
     }
 
-    if(channel === 'show-screen' || (isDev && channel == 'show-screen-publish')){
-        screenWindow && (screenWindow.close());
-        screenWindow = null;
-        screenWindow = CreateDefaultWin();
-        screenWindow.loadFile( path.join(__dirname, 'static/screen.html'),{ search:data });
-        screenWindow.moveTop();
-        screenWindow.maximize();
-        screenWindow.on('closed',()=>{
-            screenWindow = null;
-        });
-        
-        const stream = theArgs.length >= 2 ? theArgs[1] : null;
-        screenWindow.webContents.on('dom-ready',function(e){
-            e.sender.send('set-remote-stream', stream);
-        });
+    if(channel === 'create-video-windows'){
+        newWindows = CreateDefaultWin();
+        newWindows.loadFile( path.join(__dirname, 'static/videoWindows.html'),{query:{ id:e.sender.id}});
+        newWindows.moveTop();
+        videoWindows.push( newWindows );
+        e.returnValue = { webContentsId: newWindows.webContents.id };
         return;
     }
-
-    if(channel == "set-icecandidate" && screenWindow)
-    {
-        screenWindow.webContents.send("set-icecandidate",...theArgs);
-        return;
-    }
-    if(channel == "set-icecandidate-remote" && screenWindow && mainWindow)
-    {
-        mainWindow.webContents.send("set-icecandidate-remote",...theArgs);
-        return;
-    }
-
-    if(channel == "set-remote-desc" && screenWindow && mainWindow)
-    {
-        mainWindow.webContents.send("set-remote-desc",...theArgs);
-        return;
-    }
-
     if(channel === 'joinRoom'){
         let param = getStartParam();
         
@@ -229,17 +210,7 @@ function ipcMessageFun(e,channel,...theArgs){
         }
         JSON.stringify(con) != lastConfigStr && (fs.writeFileSync(localConfig,JSON.stringify(con),{encoding:'utf-8'}));
 
-        mainWindow = CreateDefaultWin({maximizable:false});
-        mainWindow.loadFile( path.join(__dirname, 'static/index.html'),{ query:param });
-        mainWindow.on('closed', () => {
-            mainWindow = null;
-        });
-        mainWindow.once('ready-to-show',()=>{
-            mainWindow.setAspectRatio(16.0/9.0);
-            mainWindow.focus();
-            mainWindow.moveTop();
-            //mainWindow.maximize();
-        });
+        CreateMainWin(param);
         
         loginRoomWindow && (loginRoomWindow.close());
         return;
