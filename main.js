@@ -74,6 +74,16 @@ let localConfig;
     });
 })();
 
+function MergeObject(a, b) {
+    let c = JSON.parse(JSON.stringify(a))
+    for (const key in b) {
+        if (Object.hasOwnProperty.call(b, key)) {
+            c[key] = (typeof b[key] == 'object' && c[key] && typeof c[key] == 'object') ? MergeObject(c[key],b[key]) : b[key]
+        }
+    }
+    return c;
+}
+
 function getStartParam()
 {
     let param = {
@@ -131,18 +141,10 @@ function CreateDefaultWin(options)
         alwaysOnTop: false,
         hasShadow: false,
     };
-    if(options)
-    {
-        for (const key in options) {
-            if (Object.hasOwnProperty.call(options, key)) {
-                opt[key] = options[key];
-            }
-        }
-    }
+    options && (opt = MergeObject(opt,options));
     let win = new BrowserWindow(opt);
     win.setMenu(null);
     isDev && win.webContents.openDevTools();
-    //win.openDevTools();
     win.webContents.on('ipc-message',ipcMessageFun);
     win.webContents.on('ipc-message-sync',ipcMessageFun);
     win.on('enter-full-screen',fullScreenChanged);
