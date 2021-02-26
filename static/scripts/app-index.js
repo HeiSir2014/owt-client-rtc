@@ -179,7 +179,7 @@ const _app = new Vue({
         fullscreen: function (e) {
             ipcRenderer.send('setFullScreen-win', true);
         },
-        unfullscreen: function (e) {
+        unFullscreen: function (e) {
             ipcRenderer.send('setFullScreen-win', false);
         },
         close: function (e) {

@@ -14,7 +14,7 @@
     <div id="App">
         <template>
             <div v-if="!isMaximized" class="header">
-                <div class="title">OWT Client v{{version}} {{ myRoom ? "| 房间号:"+ myRoom:""}}</div>
+                <div class="title">OWT Client v{{version}} {{ myRoom ? "| 房间号:"+ myRoom:""}} {{ screenSharingUser ? "| "+ screenSharingUser+" 正在分享桌面":""}}</div>
                 <div class="systools">
                     <div class="minimize" @click="minimize"></div>
                     <div class="fullscreen" @click="fullscreen"></div>
@@ -23,7 +23,7 @@
             </div>
             <div class="toolbar">
                 <div v-if="isMaximized" class="fullscreenbar">
-                    <div class="unfullscreen" @click="unfullscreen"></div>
+                    <div class="unfullscreen" @click="unFullscreen"></div>
                 </div>
                 <div class="network">
                     <div class="wireless"></div>
