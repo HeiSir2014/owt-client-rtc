@@ -2,8 +2,6 @@
 [![Download](https://img.shields.io/github/downloads/heisir2014/owt-client-rtc/total?style=for-the-badge)](https://github.com/heisir2014/owt-client-rtc/releases/latest)
 # OWT Client [直接下载](#下载)
 
-![](https://img.shields.io/github/downloads/heisir2014/owt-client-rtc/total?style=for-the-badge)
-
 服务器程序使用的OWT-Server [Open WebRTC Toolkit](https://github.com/open-webrtc-toolkit/)
 
 OWT-Client 是基于OWT、Electron开发的视频会议客户端，支持Windows、Linux、MacOS系统。
