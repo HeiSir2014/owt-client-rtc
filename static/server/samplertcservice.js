@@ -7,6 +7,7 @@ var express = require('express'),
   errorhandler = require('errorhandler'),
   morgan = require('morgan'),
   fs = require('fs'),
+  path = require('path'),
   log4js = require('log4js'),
   https = require('https'),
   icsREST = require('./rest');
