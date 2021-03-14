@@ -73,7 +73,7 @@ app.use(function (req, res, next) {
 });
 
 //vod 点播目录
-if(fs.existsSync(path.join(__dirname ,'/../../vod/')))
+if(!sfs.existsSync(path.join(__dirname ,'/../../vod/')))
 {
   fs.mkdirSync(path.join(__dirname ,'/../../vod/'));
 }
