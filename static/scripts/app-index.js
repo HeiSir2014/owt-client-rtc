@@ -425,7 +425,7 @@ const _app = new Vue({
 
             that.localStream = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('mic', 'camera'));
             try {
-                that.publicationGlobal = await that.conference.publish(that.localStream, { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 2500 }] });
+                that.publicationGlobal = await that.conference.publish(that.localStream, { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 1000 }] });
             } catch (error) {
                 that.publicationGlobal = null;
                 console.error(error);
@@ -460,7 +460,7 @@ const _app = new Vue({
 
             that.localStreamSecond = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('mic', 'camera'));
             try {
-                that.publicationGlobalSecond = await that.conference.publish(that.localStreamSecond, { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 4000 }], audio: false });
+                that.publicationGlobalSecond = await that.conference.publish(that.localStreamSecond, { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 1000 }], audio: false });
                 that.isCamera2Muted = false;
             } catch (error) {
                 that.publicationGlobalSecond = null;
@@ -502,7 +502,7 @@ const _app = new Vue({
 
             that.screen_select_visible = false;
 
-            let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 8000 }] };
+            let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 1500 }] };
             that.ScreenStream = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('screen-cast', 'screen-cast'));
             that.conference.publish(that.ScreenStream, publishOption).then(publication => {
                 that.publicationScreenGlobal = publication;
