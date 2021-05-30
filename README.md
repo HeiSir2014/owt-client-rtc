@@ -26,8 +26,15 @@ OWT-Client 是基于OWT、Electron开发的视频会议客户端，支持Windows
 
 [Release](https://github.com/HeiSir2014/owt-client-rtc/releases/)
 
-## 开发
+## 开发 用源码编译
 
+依赖：nodejs、git、electron
+
+1. install Node.js [Node.js](https://nodejs.org/)
+
+2. install Git [Download Git](https://git-scm.com/)
+
+3. shell
 ```
 mkdir owt-client
 cd owt-client
@@ -37,6 +44,10 @@ npm run start
 ```
 
 ## 交流学习
+
+下面的视频是和一个小伙伴介绍本项目的录屏。
+
+[交流录屏 - B站](https://www.bilibili.com/video/BV1H5411g7A6/) | [交流录屏 - YouTube](https://www.youtube.com/watch?v=fn1tBTqsjyA)
 
 QQ群：213941700
 
