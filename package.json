@@ -1,124 +1,134 @@
 {
-  "name": "owt-client",
-  "version": "1.0.5",
-  "description": "owt-client",
-  "main": "main.js",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/HeiSir2014/owt-client-rtc.git"
-  },
-  "keywords": [
-    "electron",
-    "webrtc",
-    "rtc",
-    "owt"
-  ],
-  "author": "heisir (QQ:1586462)",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/HeiSir2014/owt-client-rtc/issues"
-  },
-  "homepage": "https://github.com/HeiSir2014/owt-client-rtc#readme",
-  "devDependencies": {
-    "electron": "^11.2.0",
-    "electron-builder": "^22.9.1"
-  },
-  "dependencies": {
-    "electron-is-dev": "^1.2.0",
-    "winston": "^3.3.3"
-  },
-  "scripts": {
-    "start": "electron .",
-    "pack-mac": "electron-builder --mac --publish always",
-    "pack-win": "electron-builder --win --publish always",
-    "postinstall": "electron-builder install-app-deps",
-    "pack-linux": "electron-builder --linux --publish always",
-    "windows-latest": "npm run pack-win",
-    "macos-latest": "npm run pack-mac",
-    "ubuntu-latest": "npm run pack-linux"
-  },
-  "build": {
-    "appId": "cn.heisir.owtclientrtc",
-    "artifactName": "OWTClient-${os}_${arch}-v${version}.${ext}",
-    "electronVersion": "11.2.0",
-    "copyright": "Copyright © 2021 ${author}",
-    "compression": "normal",
-    "directories": {
-      "output": "dist"
+    "name": "owt-client",
+    "version": "2.0.1",
+    "description": "owt-client",
+    "main": "main.js",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/HeiSir2014/owt-client-rtc.git"
     },
-    "files": [
-      "**/*",
-      "!dist/*",
-      "!.github/*",
-      "!README.md",
-      "!.gitignore"
+    "keywords": [
+        "electron",
+        "webrtc",
+        "rtc",
+        "owt"
     ],
-    "asar": true,
-    "win": {
-      "target": [
-        {
-          "target": "nsis"
+    "author": "heisir (QQ:1586462)",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/HeiSir2014/owt-client-rtc/issues"
+    },
+    "homepage": "https://github.com/HeiSir2014/owt-client-rtc#readme",
+    "devDependencies": {
+        "electron": "^13.1.6",
+        "electron-builder": "^22.11.7"
+    },
+    "dependencies": {
+        "electron-is-dev": "^2.0.0",
+        "winston": "^3.3.3"
+    },
+    "scripts": {
+        "start": "electron .",
+        "pack-mac": "electron-builder --mac --publish always",
+        "pack-win": "electron-builder --win --publish always",
+        "postinstall": "electron-builder install-app-deps",
+        "pack-linux": "electron-builder --linux --publish always",
+        "windows-latest": "npm run pack-win",
+        "macos-latest": "npm run pack-mac",
+        "ubuntu-latest": "npm run pack-linux"
+    },
+    "build": {
+        "appId": "cn.heisir.owtclientrtc",
+        "artifactName": "OWTClient-${os}_${arch}-v${version}.${ext}",
+        "electronVersion": "13.1.6",
+        "copyright": "Copyright © 2021 ${author}",
+        "compression": "normal",
+        "directories": {
+            "output": "dist"
         },
-        {
-          "target": "zip",
-          "arch": [
-            "x64",
-            "ia32"
-          ]
-        }
-      ],
-      "icon": "static/icon/logo-512.png"
-    },
-    "dmg": {
-      "window": {
-        "width": 540,
-        "height": 380
-      },
-      "contents": [
-        {
-          "x": 410,
-          "y": 230,
-          "type": "link",
-          "path": "/Applications"
+        "files": [
+            "**/*",
+            "!dist/*",
+            "!.github/*",
+            "!README.md",
+            "!.gitignore"
+        ],
+        "asar": true,
+        "win": {
+            "target": [
+                {
+                    "target": "nsis"
+                },
+                {
+                    "target": "zip",
+                    "arch": [
+                        "x64",
+                        "ia32"
+                    ]
+                }
+            ],
+            "icon": "static/icon/logo-512.png"
         },
-        {
-          "x": 130,
-          "y": 230,
-          "type": "file"
+        "dmg": {
+            "window": {
+                "width": 540,
+                "height": 380
+            },
+            "contents": [
+                {
+                    "x": 410,
+                    "y": 230,
+                    "type": "link",
+                    "path": "/Applications"
+                },
+                {
+                    "x": 130,
+                    "y": 230,
+                    "type": "file"
+                }
+            ]
+        },
+        "mac": {
+            "hardenedRuntime": true,
+            "appId": "cn.heisir.owtclientrtc-mac",
+            "category": "public.app-category.productivity",
+            "target": [
+                "dmg"
+            ],
+            "icon": "static/icon/logo.icns",
+            "minimumSystemVersion": "10.15"
+        },
+        "nsis": {
+            "perMachine": true,
+            "oneClick": false,
+            "allowElevation": true,
+            "allowToChangeInstallationDirectory": true,
+            "installerIcon": "static/icon/logo.ico",
+            "uninstallerIcon": "static/icon/logo.ico",
+            "installerHeaderIcon": "static/icon/logo.ico",
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "RTCClient",
+            "include": "install-package/urlProtocol.nsh"
+        },
+        "protocols": [
+            {
+                "name": "owtclient",
+                "schemes": [
+                    "owtclient"
+                ]
+            }
+        ],
+        "appImage": {
+            "category": "public.app-category.productivity"
+        },
+        "linux": {
+            "target": [
+                "AppImage",
+                "deb"
+            ],
+            "maintainer": "heisir <heisir21@163.com>",
+            "category": "Utility"
         }
-      ]
-    },
-    "mac": {
-      "hardenedRuntime": true,
-      "appId": "cn.heisir.owtclientrtc-mac",
-      "category": "public.app-category.productivity",
-      "target": [
-        "dmg"
-      ],
-      "icon": "static/icon/logo.icns"
-    },
-    "nsis": {
-      "perMachine": true,
-      "oneClick": false,
-      "allowElevation": true,
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "static/icon/logo.ico",
-      "uninstallerIcon": "static/icon/logo.ico",
-      "installerHeaderIcon": "static/icon/logo.ico",
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "OWT Client"
-    },
-    "appImage": {
-      "category": "public.app-category.productivity"
-    },
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "maintainer": "heisir <heisir21@163.com>",
-      "category": "Utility"
     }
-  }
 }

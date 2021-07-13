@@ -40,8 +40,11 @@ const _app = new Vue({
             tools_hover: false,
             participants: [],
             remoteStreams: [],
-
             screenSharingUser: '',
+            localStream:null,
+            localStreamSecond:null,
+            selectStreamId:'', 
+
         }
     },
     methods: {
@@ -68,8 +71,7 @@ const _app = new Vue({
             that.isDesktopShared = false;
             that.isRecordStarted = false;
 
-            that.usedCamera = "默认";
-            that.usedMicrophone = "默认";
+            that.checkDevices();
 
             createToken(that.myRoom, that.myUserId, 'presenter', function (response) {
                 var token = response;
@@ -89,22 +91,7 @@ const _app = new Vue({
                     });
                     that.remoteStreams = resp.remoteStreams.filter(r => r.source && r.source.video && r.source.video != 'mixed');
 
-                    (that.enableAudio || that.enableVideo) && that.publishVideo();
-
-                    var streams = resp.remoteStreams;
-                    console.log(streams);
-                    for (const stream of streams) {
-                        if ((stream.source.audio === 'mixed' || stream.source.video ===
-                            'mixed') && stream.id.indexOf('-presenters') != -1) {
-                            that.subscribeStream(stream, (subscribe) => {
-                                console.log('subscribeStream result');
-                                that.subscriptionGlobal = subscribe;
-                                that.subscriptionGlobal && (that.playerStream = stream.mediaStream, that.mixStreamGlobal = stream);
-                            });
-                            console.log('subscribeStream finish');
-                        }
-                        that.streamAdded({ stream });
-                    }
+                    that.subscribeMixStream();
                 }, function (err) {
                     console.error('server connection failed:', err);
                     if (err.message.indexOf('connect_error:') >= 0) {
@@ -189,22 +176,66 @@ const _app = new Vue({
         minimize: function (e) {
             ipcRenderer.send("minimize-win");
         },
-        subscribeStream: async function (stream, callback) {
+        subscribeMixStream:async function(){
+            const that = this;
+            (that.enableAudio || that.enableVideo) && that.publishVideo();
+
+            var streams = that.conference.info.remoteStreams;
+            console.log(streams);
+            for (const stream of streams) {
+                if ((stream.source.audio === 'mixed' || stream.source.video ===
+                    'mixed') && stream.id.indexOf('-common') != -1) {
+                    that.subscribeStream(stream, (subscribe) => {
+                        console.log('subscribeStream result');
+                        that.subscriptionGlobal = subscribe;
+                        that.subscriptionGlobal && (that.playerStream = stream.mediaStream, that.mixStreamGlobal = stream);
+                        that.subscriptionGlobal.addEventListener('error',(e)=>{
+                            console.log("subscriptionGlobal error",e);
+                            
+                        });
+                        streams.filter((s)=>s.source.video == 'screen-cast').length > 0 && that.switchVideoParam(true);
+                        that.subscriptionGlobal.addEventListener('ended',(e)=>{
+                            console.log("subscriptionGlobal ended",e);
+                            setTimeout(that.subscribeMixStream.bind(that),5000);
+                        });
+                    },()=>{
+                        setTimeout(that.subscribeMixStream.bind(that),5000);
+                    });
+                    console.log('subscribeStream finish');
+                }
+                that.streamAdded({ stream });
+            }
+        },
+        subscribeStream: async function (stream, callback,reject) {
             const that = this;
             if (!that.conference) return;
             try {
+                let resolution = stream.settings.video[0].resolution;
+                if(stream.source.video != 'screen-cast')
+                {
+                    stream.settings.video.forEach(v => {
+                        v.resolution.width == 1280 && v.resolution.height == 720 && (resolution = v.resolution);
+                    });
+    
+                    resolution.width != 1280 && stream.extraCapabilities.video.resolutions.forEach(r => {
+                        r.width == 1280 && (resolution = r);
+                    });
+    
+                    console.log(resolution,stream.settings.video)
+                }
                 await that.conference.subscribe(stream, {
                     audio: stream.source.audio ? true : false,
                     video: {
-                        codecs: [{ name: "h264", profile: "CB" }],
-                        resolutions: [stream.settings.video[0].resolution],
-                        bitrateMultipliers: [1.0]
+                        codec: { name: "h264", profile: "CB" },
+                        resolution: resolution,
                     }
                 }).then(callback, (err) => {
                     console.log('subscribe failed', err);
+                    reject && reject();
                 });
             } catch (error) {
                 console.log('subscribe failed', error);
+                reject && reject();
             }
             return;
         },
@@ -212,6 +243,9 @@ const _app = new Vue({
             const dict = { camera: "摄像头", "screen-cast": "桌面" };
             if (streamSource in dict) return dict[streamSource];
             return '视频';
+        },
+        convertSource2: function (remoteStream) {
+            return this.getStreamUserId(remoteStream)+"的"+this.convertSource(remoteStream.source.video);
         },
         getUserIdFromOrigin: function (origin) {
             const p = this.participants.find(p => p.id == origin);
@@ -305,9 +339,10 @@ const _app = new Vue({
                 && stream.source.video
                 && stream.source.video == 'screen-cast') {
                 that.screenSharingUser = that.getStreamUserId(stream);
-                that.subscribeStream(stream, (subscription) => {
-                    that.showScreenStream(stream, subscription);
-                });
+                // that.subscribeStream(stream, (subscription) => {
+                //     that.showScreenStream(stream, subscription);
+                // });
+                that.switchVideoParam(true);
             }
             stream.addEventListener('ended', that.streamEnded.bind(that, stream));
         },
@@ -315,14 +350,25 @@ const _app = new Vue({
             console.log(stream.id + ' is ended.');
             const that = this;
             if (!that.conference) return;
-            stream.source && stream.source.video == 'screen-cast' && (that.screenSharingUser = '')
+            stream.source && stream.source.video == 'screen-cast' && (that.screenSharingUser = '',that.subscriptionGlobal && that.subscriptionGlobal.applyOptions({video:{frameRate:24}}))
             that.remoteStreams = that.conference.info.remoteStreams.filter(r => r.source && r.source.video && r.source.video != 'mixed');
+        },
+        switchVideoParam:function(isScreenShared, bitrateMultiplier){
+            
+            const that = this;
+            const frameRateOrigin = that.mixStreamGlobal ? that.mixStreamGlobal.settings.video[0].frameRate:24;
+            that.mixStreamGlobal && that.subscriptionGlobal && that.subscriptionGlobal.applyOptions({
+                video:{
+                    frameRate:isScreenShared?6:frameRateOrigin,
+                    bitrateMultiplier:0.9,
+                    resolution:isScreenShared?{width:1920,height:1080}:{width:1280,height:720}
+                }})
         },
         checkDevices: async function () {
             const that = this;
             let videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
             let audioConstraints = [new Owt.Base.AudioTrackConstraints(Owt.Base.AudioSourceInfo.MIC), false];
-            let resolutions = [{ width: 1280, height: 720 }, undefined, false];
+            let resolutions = [{ width: 1280, height: 720 },{ width: 720, height: 1280 },undefined, false];
             let mediaStream;
             for (const audioConstraint of audioConstraints) {
                 for (const resolution of resolutions) {
@@ -332,7 +378,7 @@ const _app = new Vue({
                         }
                         else {
                             videoConstraints.resolution = resolution;
-                            if (resolution == undefined) delete videoConstraints.resolution;
+                            if (resolution == undefined) videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
                         }
                         mediaStream = await Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
                             audioConstraint, videoConstraints));
@@ -372,28 +418,39 @@ const _app = new Vue({
         },
         publishVideo: async function () {
             const that = this;
-            let videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
             let audioConstraints = [new Owt.Base.AudioTrackConstraints(Owt.Base.AudioSourceInfo.MIC), false];
+            let facingModes = [{exact:"user"},undefined];
             let resolutions = [{ width: 1280, height: 720 }, { width: 640, height: 360 }, undefined, false];
+            screen && screen.orientation && screen.orientation.type && screen.orientation.type.indexOf('landscape') == -1 &&
+            resolutions.unshift({ width: 720, height: 1280 },{ width: 360, height: 640 });
+            (!screen || !screen.orientation ) && document.body.clientWidth < document.body.clientHeight && 
+             resolutions.unshift({ width: 720, height: 1280 },{ width: 360, height: 640 });
             let mediaStream;
             for (const audioConstraint of audioConstraints) {
-                for (const resolution of resolutions) {
-                    try {
-                        if (resolution === false) {
-                            videoConstraints = false;
-                        }
-                        else {
-                            videoConstraints.resolution = resolution;
-                            if (resolution == undefined) delete videoConstraints.resolution;
-                        }
 
-                        mediaStream = await Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
-                            audioConstraint, videoConstraints));
-                        break;
-                    } catch (error) {
-                        mediaStream = null;
-                        console.error(error);
+                for(const facingMode of facingModes){
+                    
+                    for (const resolution of resolutions) {
+                        try {
+                            let videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
+                            facingMode && (videoConstraints.facingMode = facingMode);
+                            
+                            if (resolution === false) {
+                                videoConstraints = false;
+                            }
+                            else {
+                                videoConstraints.resolution = resolution;
+                                if (resolution == undefined) videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
+                            }
+                            mediaStream = await Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
+                                audioConstraint, videoConstraints));
+                            break;
+                        } catch (error) {
+                            mediaStream = null;
+                            console.error(error);
+                        }
                     }
+                    if (mediaStream) break;
                 }
                 if (mediaStream) break;
             }
@@ -419,13 +476,19 @@ const _app = new Vue({
 
             audioTrack && (audioTrack.enabled = that.enableAudio);
             videoTrack && (videoTrack.enabled = that.enableVideo);
-
+            try{
+                await videoTrack.applyConstraints({frameRate:{max:15}})
+            }
+            catch(err){
+                console.log("applyConstraints")
+                console.erroe(err)
+            }
             that.isCameraMuted = videoTrack ? !videoTrack.enabled : true;
             that.isMicMuted = audioTrack ? !audioTrack.enabled : true;
 
             that.localStream = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('mic', 'camera'));
             try {
-                that.publicationGlobal = await that.conference.publish(that.localStream, { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 1000 }] });
+                that.publicationGlobal = await that.conference.publish(that.localStream, { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 1024 }] });
             } catch (error) {
                 that.publicationGlobal = null;
                 console.error(error);
@@ -433,21 +496,24 @@ const _app = new Vue({
             }
             if (!that.publicationGlobal)
                 return;
-            mixStream(that.myRoomId, that.publicationGlobal.id, ['common', 'presenters']);
+            mixStream(that.myRoomId, that.publicationGlobal.id, ['common']);
             that.publicationGlobal.addEventListener('error', that._clearLocalCamera.bind(that));
             that.publicationGlobal.addEventListener('ended', that._clearLocalCamera.bind(that));
         },
         publishVideoSecond: async function () {
             const that = this;
             let videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
-            let resolutions = [{ width: 1920, height: 1080 }, { width: 1280, height: 720 }, { width: 640, height: 360 }, undefined];
+            let resolutions = [{ width: 1280, height: 720 }, { width: 1280, height: 720 }, { width: 640, height: 360 }, undefined];
+            screen && screen.orientation && screen.orientation.type && screen.orientation.type.indexOf('landscape') == -1 &&
+             resolutions.unshift({ width: 720, height: 1280 },{ width: 360, height: 640 });
+            
             let mediaStream;
             videoConstraints.deviceId = that.usedCamera2DeviceId;
             for (const resolution of resolutions) {
                 try {
                     videoConstraints.resolution = resolution;
-                    resolution == undefined && delete videoConstraints.resolution;
-
+                    if(resolution == undefined) videoConstraints = new Owt.Base.VideoTrackConstraints(Owt.Base.VideoSourceInfo.CAMERA);
+                    
                     mediaStream = await Owt.Base.MediaStreamFactory.createMediaStream(new Owt.Base.StreamConstraints(
                         false, videoConstraints));
                     break;
@@ -457,10 +523,21 @@ const _app = new Vue({
                 }
             }
             if (!mediaStream) return;
+            
+            let vT = mediaStream.getVideoTracks();
+            let videoTrack;
+            vT && vT.length && (videoTrack =vT[0] )
+            try{
+                await videoTrack.applyConstraints({frameRate:{exact:15,ideal:15}})
+            }
+            catch(err){
+                console.log("applyConstraints")
+                console.erroe(err)
+            }
 
             that.localStreamSecond = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('mic', 'camera'));
             try {
-                that.publicationGlobalSecond = await that.conference.publish(that.localStreamSecond, { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 1000 }], audio: false });
+                that.publicationGlobalSecond = await that.conference.publish(that.localStreamSecond, { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 1024 }], audio: false });
                 that.isCamera2Muted = false;
             } catch (error) {
                 that.publicationGlobalSecond = null;
@@ -469,7 +546,7 @@ const _app = new Vue({
             }
             if (!that.publicationGlobalSecond)
                 return;
-            mixStream(that.myRoomId, that.publicationGlobalSecond.id, ['common', 'presenters']);
+            mixStream(that.myRoomId, that.publicationGlobalSecond.id, ['common']);
             that.publicationGlobalSecond.addEventListener('error', that._clearLocalCameraSecond.bind(that));
             that.publicationGlobalSecond.addEventListener('ended', that._clearLocalCameraSecond.bind(that));
         },
@@ -488,21 +565,38 @@ const _app = new Vue({
         _startShareScreen: async function (id) {
             const that = this;
             let mediaStream;
-            mediaStream = await navigator.mediaDevices.getUserMedia({
-                audio: false,
-                video: {
-                    mandatory: {
-                        chromeMediaSource: 'screen',
-                        chromeMediaSourceId: id,
-                        maxWidth: 1920,
-                        maxHeight: 1920
+            try{
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: {
+                        mandatory: {
+                            chromeMediaSource: 'screen',
+                            chromeMediaSourceId: id,
+                            maxWidth: 1920
+                        }
                     }
-                }
-            });
+                });
+            }
+            catch(err){
+                console.log("applyConstraints")
+                console.error(err)
+                return;
+            }
+
+            let vT = mediaStream.getVideoTracks();
+            let videoTrack;
+            vT && vT.length && (videoTrack =vT[0] )
+            try{
+                await videoTrack.applyConstraints({frameRate:{max:5}})
+            }
+            catch(err){
+                console.log("applyConstraints")
+                console.erroe(err)
+            }
 
             that.screen_select_visible = false;
 
-            let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 1500 }] };
+            let publishOption = { video: [{ codec: { name: 'h264', profile: 'CB' }, maxBitrate: 2500 }] };
             that.ScreenStream = new Owt.Base.LocalStream(mediaStream, new Owt.Base.StreamSourceInfo('screen-cast', 'screen-cast'));
             that.conference.publish(that.ScreenStream, publishOption).then(publication => {
                 that.publicationScreenGlobal = publication;
@@ -510,10 +604,17 @@ const _app = new Vue({
                 that.screenSharingUser = "我";
                 that.isDesktopShared = true;
 
-                mixStream(that.myRoomId, publication.id, ['common']);
+                mixStream(that.myRoomId, publication.id, ['common'],()=>{
+                    
+                    const remoteStreams = this.conference.info.remoteStreams.filter(r => r.source && r.source.video && r.source.video == 'mixed');
+                    remoteStreams.forEach(remoteStream => {
+                        activeLayoutStream(that.myRoomId, remoteStream.id, publication.id);
+                    })
+                });
                 publication.addEventListener('error', that._clearScreenShare.bind(that));
                 publication.addEventListener('ended', that._clearScreenShare.bind(that));
 
+                that.switchVideoParam(true);
                 // that.showScreenStream(that.ScreenStream);
 
             }, err => {
@@ -577,6 +678,7 @@ const _app = new Vue({
             that.screenSharingUser = '';
             that.isDesktopShared = false;
             that.parentWebContentsId >= 0 && ipcRenderer.sendTo(that.parentWebContentsId, 'message', { isDesktopShared: false });
+            that.switchVideoParam(false);
         },
         _getStat: async function () {
             const that = this;
@@ -590,13 +692,13 @@ const _app = new Vue({
             }
 
             that.subscriptionGlobal && (stats = await that.subscriptionGlobal.getStats());
-            stats && stats.forEach(statForEach) && (stats = null);
+            stats && (stats.forEach(statForEach),stats = null);
             that.publicationGlobal && (stats = await that.publicationGlobal.getStats());
-            stats && stats.forEach(statForEach) && (stats = null);
+            stats && (stats.forEach(statForEach),stats = null);
             that.publicationGlobalSecond && (stats = await that.publicationGlobalSecond.getStats());
-            stats && stats.forEach(statForEach) && (stats = null);
+            stats && (stats.forEach(statForEach),stats = null);
             that.publicationScreenGlobal && (stats = await that.publicationScreenGlobal.getStats());
-            stats && stats.forEach(statForEach) && (stats = null);
+            stats && (stats.forEach(statForEach),stats = null);
 
             if (that.bytesReceivedGlobal && bytesReceived > that.bytesReceivedGlobal) {
                 that.statDownload = Math.round((bytesReceived - that.bytesReceivedGlobal) / 1024);
@@ -607,16 +709,31 @@ const _app = new Vue({
             that.bytesReceivedGlobal = bytesReceived;
             that.bytesSentGlobal = bytesSent;
         },
+        selectStreamChange: function(){
+            if(!this.selectStreamId) return;
+            this.clickChangeLayout(`activeLayout-${this.selectStreamId}`);
+        },
         clickChangeLayout: function (e) {
+            const that = this;
             console.log(e);
-
-            if (e != 'switchLayout') return;
+            if (e.indexOf('activeLayout') == 0)
+            {
+                const subStream = e.substr('activeLayout-'.length);
+                const remoteStreams = this.conference.info.remoteStreams.filter(r => r.source && r.source.video && r.source.video == 'mixed');
+                remoteStreams.forEach(remoteStream => {
+                    activeLayoutStream(that.myRoomId, remoteStream.id, subStream);
+                })
+                return;
+            }
+            if (e.indexOf('switchLayout') != 0) return;
             if (!this.subscriptionGlobal) return;
             const layouts = [
-                [{ "region": [{ "id": "1", "area": { "height": "1", "width": "1", "top": "0", "left": "0" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "1/4", "width": "1/4", "top": "3/4", "left": "3/4" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1279/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "539/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1279/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "1439/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "269/1080", "width": "479/1920", "top": "0", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "268/1080", "width": "479/1920", "top": "271/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "268/1080", "width": "479/1920", "top": "541/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "1441/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "719/1080", "width": "1279/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "358/1080", "width": "639/1920", "top": "721/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "0" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "809/1080", "width": "1439/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "269/1080", "width": "479/1920", "top": "0", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "268/1080", "width": "479/1920", "top": "281/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "268/1080", "width": "479/1920", "top": "541/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "268/1080", "width": "479/1920", "top": "811/1080", "left": "1441/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "961/1920" }, "shape": "rectangle" }, { "id": "7", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "481/1920" }, "shape": "rectangle" }, { "id": "8", "area": { "height": "269/1080", "width": "479/1920", "top": "811/1080", "left": "0" }, "shape": "rectangle" }] }],
+                [{"region":[{"id":"1","area":{"height":"1","width":"1","top":"0","left":"0"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"1","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"214/1080","width":"386/1920","top":"8/10","left":"8/10"},"shape":"rectangle"},{"id":"3","area":{"height":"214/1080","width":"386/1920","top":"6/10","left":"8/10"},"shape":"rectangle"},{"id":"4","area":{"height":"214/1080","width":"386/1920","top":"4/10","left":"8/10"},"shape":"rectangle"},{"id":"5","area":{"height":"214/1080","width":"386/1920","top":"2/10","left":"8/10"},"shape":"rectangle"},{"id":"6","area":{"height":"214/1080","width":"386/1920","top":"0","left":"8/10"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"8/10","width":"8/10","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"214/1080","width":"386/1920","top":"8/10","left":"8/10"},"shape":"rectangle"},{"id":"3","area":{"height":"214/1080","width":"386/1920","top":"6/10","left":"8/10"},"shape":"rectangle"},{"id":"4","area":{"height":"214/1080","width":"386/1920","top":"4/10","left":"8/10"},"shape":"rectangle"},{"id":"5","area":{"height":"214/1080","width":"386/1920","top":"2/10","left":"8/10"},"shape":"rectangle"},{"id":"6","area":{"height":"214/1080","width":"386/1920","top":"0","left":"8/10"},"shape":"rectangle"},{"id":"7","area":{"height":"214/1080","width":"386/1920","top":"8/10","left":"6/10"},"shape":"rectangle"},{"id":"8","area":{"height":"214/1080","width":"386/1920","top":"8/10","left":"4/10"},"shape":"rectangle"},{"id":"9","area":{"height":"214/1080","width":"386/1920","top":"8/10","left":"2/10"},"shape":"rectangle"},{"id":"10","area":{"height":"214/1080","width":"386/1920","top":"8/10","left":"0"},"shape":"rectangle"}]}],
                 [{ "region": [{ "id": "1", "area": { "height": "1", "width": "1", "top": "0", "left": "0" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "959/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "1", "width": "959/1920", "top": "0", "left": "961/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "1", "width": "959/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "959/1920", "width": "959/1920", "top": "0", "left": "961/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "539/1080", "width": "959/1920", "top": "541/1080", "left": "961/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "539/1080", "width": "959/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "539/1080", "width": "959/1920", "top": "0", "left": "961/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "538/1080", "width": "959/1920", "top": "541/1080", "left": "0" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "539/1080", "width": "959/1920", "top": "541/1080", "left": "961/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "539/1080", "width": "959/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "539/1080", "width": "959/1920", "top": "0", "left": "961/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "538/1080", "width": "639/1920", "top": "541/1080", "left": "0" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "539/1080", "width": "639/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "539/1080", "width": "638/1920", "top": "0", "left": "641/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "539/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "0" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "539/1080", "width": "638/1920", "top": "541/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "539/1080", "width": "639/1920", "top": "541/1080", "left": "1281/1920" }, "shape": "rectangle" }] }, { "region": [{ "id": "1", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "0" }, "shape": "rectangle" }, { "id": "2", "area": { "height": "359/1080", "width": "638/1920", "top": "0", "left": "641/1920" }, "shape": "rectangle" }, { "id": "3", "area": { "height": "359/1080", "width": "639/1920", "top": "0", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "4", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "0" }, "shape": "rectangle" }, { "id": "5", "area": { "height": "358/1080", "width": "638/1920", "top": "361/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "6", "area": { "height": "358/1080", "width": "639/1920", "top": "361/1080", "left": "1281/1920" }, "shape": "rectangle" }, { "id": "7", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "0" }, "shape": "rectangle" }, { "id": "8", "area": { "height": "359/1080", "width": "638/1920", "top": "721/1080", "left": "641/1920" }, "shape": "rectangle" }, { "id": "9", "area": { "height": "359/1080", "width": "639/1920", "top": "721/1080", "left": "1281/1920" }, "shape": "rectangle" }] }],
+                [{"region":[{"id":"1","area":{"height":"1","width":"1","top":"0","left":"0"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"971/1080","width":"1","top":"109/1080","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"108/1080","width":"190/1920","top":"0","left":"864/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"971/1080","width":"1","top":"109/1080","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"108/1080","width":"190/1920","top":"0","left":"767/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"108/1080","width":"190/1920","top":"0","left":"961/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"971/1080","width":"1","top":"109/1080","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"108/1080","width":"190/1920","top":"0","left":"864/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"108/1080","width":"190/1920","top":"0","left":"1057/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"108/1080","width":"190/1920","top":"0","left":"671/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"971/1080","width":"1","top":"109/1080","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"108/1080","width":"190/1920","top":"0","left":"767/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"108/1080","width":"190/1920","top":"0","left":"961/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"108/1080","width":"190/1920","top":"0","left":"576/1920"},"shape":"rectangle"},{"id":"5","area":{"height":"108/1080","width":"190/1920","top":"0","left":"1154/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"971/1080","width":"1","top":"109/1080","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"108/1080","width":"190/1920","top":"0","left":"864/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"108/1080","width":"190/1920","top":"0","left":"1057/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"108/1080","width":"190/1920","top":"0","left":"671/1920"},"shape":"rectangle"},{"id":"5","area":{"height":"108/1080","width":"190/1920","top":"0","left":"1250/1920"},"shape":"rectangle"},{"id":"6","area":{"height":"108/1080","width":"190/1920","top":"0","left":"478/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"971/1080","width":"1","top":"109/1080","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"108/1080","width":"190/1920","top":"0","left":"767/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"108/1080","width":"190/1920","top":"0","left":"961/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"108/1080","width":"190/1920","top":"0","left":"576/1920"},"shape":"rectangle"},{"id":"5","area":{"height":"108/1080","width":"190/1920","top":"0","left":"1154/1920"},"shape":"rectangle"},{"id":"6","area":{"height":"108/1080","width":"190/1920","top":"0","left":"383/1920"},"shape":"rectangle"},{"id":"7","area":{"height":"108/1080","width":"190/1920","top":"0","left":"1347/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"971/1080","width":"1","top":"109/1080","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"108/1080","width":"190/1920","top":"0","left":"864/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"108/1080","width":"190/1920","top":"0","left":"1057/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"108/1080","width":"190/1920","top":"0","left":"671/1920"},"shape":"rectangle"},{"id":"5","area":{"height":"108/1080","width":"190/1920","top":"0","left":"1250/1920"},"shape":"rectangle"},{"id":"6","area":{"height":"108/1080","width":"190/1920","top":"0","left":"478/1920"},"shape":"rectangle"},{"id":"7","area":{"height":"108/1080","width":"190/1920","top":"0","left":"1443/1920"},"shape":"rectangle"},{"id":"8","area":{"height":"108/1080","width":"190/1920","top":"0","left":"285/1920"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"971/1080","width":"1","top":"109/1080","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"108/1080","width":"190/1920","top":"0","left":"767/1920"},"shape":"rectangle"},{"id":"3","area":{"height":"108/1080","width":"190/1920","top":"0","left":"961/1920"},"shape":"rectangle"},{"id":"4","area":{"height":"108/1080","width":"190/1920","top":"0","left":"576/1920"},"shape":"rectangle"},{"id":"5","area":{"height":"108/1080","width":"190/1920","top":"0","left":"1154/1920"},"shape":"rectangle"},{"id":"6","area":{"height":"108/1080","width":"190/1920","top":"0","left":"383/1920"},"shape":"rectangle"},{"id":"7","area":{"height":"108/1080","width":"190/1920","top":"0","left":"1347/1920"},"shape":"rectangle"},{"id":"8","area":{"height":"108/1080","width":"190/1920","top":"0","left":"190/1920"},"shape":"rectangle"},{"id":"9","area":{"height":"108/1080","width":"190/1920","top":"0","left":"1540/1920"},"shape":"rectangle"}]}],
+                [{"region":[{"id":"1","area":{"height":"1","width":"1","top":"0","left":"0"},"shape":"rectangle"}]},{"region":[{"id":"1","area":{"height":"1","width":"1","top":"0","left":"0"},"shape":"rectangle"},{"id":"2","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"3","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"4","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"5","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"6","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"7","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"8","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"9","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"10","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"11","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"12","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"13","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"14","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"15","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"},{"id":"16","area":{"height":"0","width":"0","top":"0","left":"0"},"shape":"rectangle"}]}],
             ];
-            this.layoutIndex = this.layoutIndex + 1, this.layoutIndex >= layouts.length && (this.layoutIndex = 0);
+            this.layoutIndex = Number.parseInt(e.substr(-1,1));
 
             let values = [];
             layouts[this.layoutIndex].forEach(__ => {
@@ -624,7 +741,7 @@ const _app = new Vue({
                 let _ = [];
                 regions.forEach(region => {
                     _.push({ region: region });
-                }), values.push(_);
+                }),values.push(_);
             });
             setLayoutStream(this.myRoomId, this.mixStreamGlobal.id, values);
         },
@@ -676,7 +793,7 @@ const _app = new Vue({
                 return;
             }
             if (that.screenSharingUser != '') {
-                that.$alert('已经有人在分享桌面了，您当前不能再进行分享操作', '提示', { confirmButtonText: '确定' });
+                that.$alert(`[${that.screenSharingUser}]`+'已经有人在分享桌面了，您当前不能再进行分享操作', '提示', { confirmButtonText: '确定' });
                 return
             }
             that.screen_data = [];

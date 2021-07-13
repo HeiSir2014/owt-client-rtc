@@ -20,7 +20,6 @@ const _app = new Vue({
         init:function(e){
             const that = this;
 
-
             ipcRenderer.on('maximizeChanged',that.maximizeChanged.bind(that));
             ipcRenderer.on('set-version', that._setVersion.bind(that) );
             ipcRenderer.on('stream_ended', that.clickClose.bind(that) );
@@ -111,6 +110,8 @@ const _app = new Vue({
         },
         clickClose:function(e){
             this.playerStream = null;
+
+            this.mainWebContentsId >0 && ipcRenderer.sendTo(this.mainWebContentsId,'set-peer-param',{close:true});
             ipcRenderer.send("close-win");
         },
         clickMinimize:function(e){
@@ -139,3 +140,12 @@ const _app = new Vue({
 });
 
 window.onbeforeunload = _app._unInit.bind(_app);
+
+function getParameterByName(name) {
+    name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+    var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+        results = regex.exec(location.search);
+    return results === null ?
+        "" :
+        decodeURIComponent(results[1].replace(/\+/g, " "));
+}

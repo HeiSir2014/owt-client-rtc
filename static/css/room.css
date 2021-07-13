@@ -36,9 +36,9 @@ div,input,span,a,p,br,h1,h2,h3,ul,li,ol{
 
 .heisir .bk .room{
     position:absolute;
-    top:calc((100% - 240px) / 2);
-    height: 240px;
-    left: 5%;
+    top:calc((100% - 320px) / 2);
+    height: 320px;
+    left: 10%;
 }
 
 

@@ -14,25 +14,26 @@
     <div id="App">
         <template>
             <div v-if="!isMaximized" class="header">
-                <div class="title">OWT Client v{{version}} {{ myRoom ? "| 房间号:"+ myRoom:""}} {{ screenSharingUser ? "| "+ screenSharingUser+" 正在分享桌面":""}}</div>
+                <div class="title">多人会议 v{{version}} {{ myRoom ? "| 房间号:"+ myRoom:""}} {{ screenSharingUser ? "| "+ screenSharingUser+" 正在分享桌面":""}}</div>
                 <div class="systools">
                     <div class="minimize" @click="minimize"></div>
                     <div class="fullscreen" @click="fullscreen"></div>
                     <div class="close" @click="close"></div>
                 </div>
             </div>
-            <div class="toolbar">
-                <div v-if="isMaximized" class="fullscreenbar">
-                    <div class="unfullscreen" @click="unFullscreen"></div>
+            <div class="video-container" :class="{fullscreen:isMaximized}">
+                <div class="toolbar">
+                    <div v-if="isMaximized" class="fullscreenbar">
+                        <div class="unfullscreen" @click="unFullscreen"></div>
+                    </div>
+                    <div class="network">
+                        <div class="wireless"></div>
+                        <div class="upload">上行：{{statUpload}} KB/s</div>
+                        <div class="download">下行：{{statDownload}} KB/s FPS: {{ playerStream? Math.floor(playerStream.getVideoTracks()[0].getSettings().frameRate) :0 }}</div>
+                    </div>
                 </div>
-                <div class="network">
-                    <div class="wireless"></div>
-                    <div class="upload">上行：{{statUpload}} KB/s</div>
-                    <div class="download">下行：{{statDownload}} KB/s</div>
-                </div>
-            </div>
-            <div class="video-container">
-                <video class="playRTC" v-if="playerStream" :src-object.prop.camel="playerStream" :muted="isSpeakMuted"
+                <video class="playRTC" v-if="playerStream" :src-object.prop.camel="(participants.length == 1 && localStream && remoteStreams && remoteStreams.length == 1) ? localStream.mediaStream : playerStream" 
+                    :muted="(participants.length == 1 && localStream && remoteStreams && remoteStreams.length == 1) ? true : isSpeakMuted" 
                     autoplay width="100%" height="100%">
                     this browser does not supported video tag
                 </video>
@@ -56,12 +57,21 @@
                                 <img class="label" src="icon/layout.png" />
                             </div>
                             <el-dropdown-menu slot="dropdown">
-                                <el-dropdown-item command="activeLayout" v-for="remoteStream in remoteStreams"
-                                    data="remoteStream.id">置顶 {{ getStreamUserId(remoteStream) }}
-                                    的{{ convertSource(remoteStream.source.video) }}</el-dropdown-item>
+                                <el-dropdown-item>
+                                    <el-select v-model="selectStreamId" placeholder="选择置顶画面" popper-class="selectStream" @change="selectStreamChange" >
+                                        <el-option
+                                            v-for="remoteStream in remoteStreams"
+                                            :key="remoteStream.id"
+                                            :label="convertSource2(remoteStream)"
+                                            :value="remoteStream.id">
+                                        </el-option>
+                                    </el-select>
+                                </el-dropdown-item>
                                 <!--<el-dropdown-item v-for="remoteStream in remoteStreams" data="remoteStream.id">单一显示 {{ getStreamUserId(remoteStream) }} 的{{ convertSource(remoteStream.source.video) }}</el-dropdown-item>-->
-
-                                <el-dropdown-item command="switchLayout" divided>切换布局</el-dropdown-item>
+                                <el-dropdown-item command="switchLayout-0" divided>画中画布局</el-dropdown-item>
+                                <el-dropdown-item command="switchLayout-1" divided>平铺布局</el-dropdown-item>
+                                <el-dropdown-item command="switchLayout-2" divided>桌面分享布局</el-dropdown-item>
+                                <el-dropdown-item command="switchLayout-3" divided>单人布局</el-dropdown-item>
                             </el-dropdown-menu>
                             <div class="title">布局</div>
                         </el-dropdown>

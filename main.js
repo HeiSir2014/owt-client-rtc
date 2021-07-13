@@ -2,7 +2,7 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const winston = require('winston');
-const { app, BrowserWindow, Tray, ipcMain, shell, Menu, dialog,session, webContents } = require('electron');
+const { app, BrowserWindow, Tray, ipcMain, shell, Menu, dialog,session, webContents,systemPreferences } = require('electron');
 const isDev = require('electron-is-dev');
 const package_self = require('./package.json');
 let mainWindow = null;
@@ -10,9 +10,26 @@ let videoWindows = [];
 let loginRoomWindow = null;
 let logger;
 let localConfig;
+let _startParam = null;
 
 
 (function(){
+
+    localConfig = path.join(app.getPath('userData'),'config.json');
+    logger = winston.createLogger({
+        level: 'debug',
+        format: winston.format.combine(
+            winston.format.timestamp({
+                format: 'YYYY-MM-DD HH:mm:ss'
+            }),
+            winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`+(info.splat!==undefined?`${info.splat}`:" "))
+        ),
+        transports: [
+            new winston.transports.Console(),
+            new winston.transports.File({ filename: path.join(app.getPath('userData'),'logs/error.log'), level: 'error' }),
+            new winston.transports.File({ filename: path.join(app.getPath('userData'),'logs/all.log') }),
+        ],
+    });
 
     // 单例应用程序
     if (!isDev && !app.requestSingleInstanceLock()) {
@@ -21,15 +38,19 @@ let localConfig;
     }
     app.on('second-instance', (event, argv, cwd) => {
         const [win] = BrowserWindow.getAllWindows();
-        console.log(win)
+        logger.info( "second-instance: "+ JSON.stringify(argv))
         if (win) {
             if (win.isMinimized()) {
                 win.restore()
             }
             win.show()
             win.focus()
-        } else {
-            app.quit();
+        }
+        if(argv)
+        {
+            console.log(argv);
+            let param = getStartParam(argv);
+            param.userId != 'any' && CreateMainWin(param);
         }
     });
     process.on('uncaughtException',(err, origin) =>{
@@ -39,26 +60,31 @@ let localConfig;
         logger.error(`unhandledRejection: ${promise} | ${reason}`)
     });
 
+    app.on('open-url', function (event, url) {
+        event.preventDefault();
+        logger.info('open-url:' + url);
+        var u = new URL(url);
+        if(u.pathname == "/inmeeting")
+        {
+            let param = getStartParam();
+            param['room'] = u.searchParams.get('room');
+            param['userId'] = u.searchParams.get('user');
+            if(app.isReady())
+            {
+                CreateMainWin(param);
+                return;
+            }
+            _startParam = param;
+        }
+    });
+
     app.on('ready', async () => {
-        localConfig = path.join(app.getPath('userData'),'config.json');
-        logger = winston.createLogger({
-            level: 'debug',
-            format: winston.format.combine(
-                winston.format.timestamp({
-                    format: 'YYYY-MM-DD HH:mm:ss'
-                }),
-                winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`+(info.splat!==undefined?`${info.splat}`:" "))
-            ),
-            transports: [
-                new winston.transports.Console(),
-                new winston.transports.File({ filename: path.join(app.getPath('userData'),'logs/error.log'), level: 'error' }),
-                new winston.transports.File({ filename: path.join(app.getPath('userData'),'logs/all.log') }),
-            ],
-        });
+
+        !app.isDefaultProtocolClient('rtcclient') && app.setAsDefaultProtocolClient("rtcclient");
 
         logger.info('load success');
 
-        let param = getStartParam();
+        let param = _startParam ? _startParam : getStartParam();
         if(param.userId == 'any')
         {
             loginRoomWindow = CreateDefaultWin({width:800,height:520,resizable:false});
@@ -84,29 +110,46 @@ function MergeObject(a, b) {
     return c;
 }
 
-function getStartParam()
+function getStartParam(argv)
 {
     let param = {
-        serverURL: Buffer.from('aHR0cHM6Ly96aGliby5kamRldmVsb3Blci5jbjozMDA0Lw==','base64').toString(),
+        serverURL: Buffer.from('aHR0cHM6Ly95enNsLmJlaWppbmd5dW56aGlzaGFuZy5jb20v','base64').toString(),
         room:'8888',
         userId:'any',
         userNick:'游客'
     };
+    
+    let _argv = argv ? argv : process.argv;
 
-    logger.info(`process.argv = ${JSON.stringify(process.argv)}`);
+    logger.info(`process.argv = ${JSON.stringify(_argv)}`);
 
-    process.argv.forEach(arg => {
+    _argv.forEach(arg => {
         let _ = null;
+        if(arg.startsWith("rtcclient://page/inmeeting"))
+        {
+            let u = new URL(arg);
+            param['room'] = u.searchParams.get('room');
+            param['userId'] = u.searchParams.get('user');
+            return;
+        }
         if((_ = arg.match(/^--(.*)=([^=]*)$/)) && _.length > 2)
         {
             param[ _[1] ]=_[2];
         }
     });
+
+    logger.info(`param = ${JSON.stringify(param)}`);
+
     return param;
 }
 
 function CreateMainWin(param)
 {
+    let win = mainWindow;
+
+    os.platform == 'darwin' && systemPreferences.askForMediaAccess('microphone');
+    os.platform == 'darwin' && systemPreferences.askForMediaAccess('camera');
+
     mainWindow = CreateDefaultWin();
     mainWindow.loadFile( path.join(__dirname, 'static/index.html'),{ query:param });
     mainWindow.on('closed', () => {
@@ -120,22 +163,27 @@ function CreateMainWin(param)
     mainWindow.once('ready-to-show',()=>{
         mainWindow.focus();
         mainWindow.moveTop();
-        mainWindow.setAspectRatio(16.0/9.0);
+        //mainWindow.setAspectRatio(16.0/9.0);
     });
+
+    win && win.close();
+
+    _startParam = null;
 }
 
 function CreateDefaultWin(options)
 {
     let opt = {
         width: 960,
-        height: 540,
+        height: 572,
         backgroundColor: '#ff2e2c29',
         skipTaskbar: false,
         transparent: false, frame: false, resizable: true,
         webPreferences: {
             nodeIntegration: true,
             spellcheck: false,
-            webSecurity:!isDev
+            webSecurity:!isDev,
+            contextIsolation:false
         },
         icon: path.join(__dirname, 'static/icon/logo.png'),
         alwaysOnTop: false,
