@@ -108,7 +108,7 @@
             "installerHeaderIcon": "static/icon/logo.ico",
             "createDesktopShortcut": true,
             "createStartMenuShortcut": true,
-            "shortcutName": "RTCClient",
+            "shortcutName": "OWTClient",
             "include": "install-package/urlProtocol.nsh"
         },
         "protocols": [
